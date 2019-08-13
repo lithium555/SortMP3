@@ -1,0 +1,4 @@
+/.idea
+/.env
+coverage.profile
+readData/
