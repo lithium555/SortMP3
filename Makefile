@@ -31,7 +31,7 @@ help:
 	} \
 	{ lastLine = $$0 }' $(MAKEFILE_LIST)
 
-## dependensies - fetch all dependencies for sripts
+## dependencies - fetch all dependencies for scripts
 dependencies:
 	${call colored, dependensies is running...}
 	./scripts/get-dependencies.sh
