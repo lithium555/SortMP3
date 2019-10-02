@@ -93,39 +93,44 @@ func (db *Database) InsertIntoTableGENRETest() error {
 }
 
 // InsertGENRE represents the record insertion into table `GENRE`.
-func (db *Database) InsertGENRE(name string) error {
-	_, err := db.PostgresConn.Exec(`
-		INSERT INTO GENRE(id, genre_name) 
-		VALUES (DEFAULT, $1) 			
-	`, name)
+func (db *Database) InsertGENRE(name string) (int, error) {
+	var genreID int
+	err := db.GetConnection().QueryRow(`
+	INSERT INTO GENRE(id, genre_name) 
+		VALUES (DEFAULT, $1) 	
+		RETURNING id
+	`, name).Scan(&genreID)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return genreID, nil
 }
 
 // InsertAUTHOR represents the record insertion into table `AUTHOR`
-func (db *Database) InsertAUTHOR(author string) error {
-	_, err := db.PostgresConn.Exec(`
-		INSERT INTO AUTHOR(id, author_name)
-		VALUES (DEFAULT, $1)
-	`, author)
+func (db *Database) InsertAUTHOR(author string) (int, error) {
+	var authorID int
+	err := db.PostgresConn.QueryRow(`
+		INSERT INTO AUTHOR (author_name)
+		VALUES ($1) RETURNING id
+	`, author).Scan(&authorID)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return authorID, nil
 }
 
 // InsertALBUM represents the record insertion into table `ALBUM`
-func (db *Database) InsertALBUM(authorID int, albumName string, albumYear int, cover string) error {
-	_, err := db.PostgresConn.Exec(`
+func (db *Database) InsertALBUM(authorID int, albumName string, albumYear int, cover string) (int, error) {
+	var albumID int
+	err := db.PostgresConn.QueryRow(`
 		INSERT INTO ALBUM(id, author_id, album_name, album_year, cover)
 		VALUES (DEFAULT, $1, $2, $3, $4)
-	`, authorID, albumName, albumYear, cover)
+		RETURNING id
+	`, authorID, albumName, albumYear, cover).Scan(&albumID)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return albumID, nil
 }
 
 // InsertSONG represents the record insertion into table `SONG`
@@ -188,7 +193,7 @@ func (db *Database) SelectSONG() ([]*models.Song, error) {
 }
 
 // SelectGenre represents sql SELECT query for table GENRE.
-func (db *Database) SelectGenre() ([]*models.Genre, error) {
+func (db *Database) SelectGENRE() ([]*models.Genre, error) {
 	rows, err := db.PostgresConn.Query(`SELECT * FROM GENRE`)
 	if err != nil {
 		log.Printf("Select() for table `GENRE` not passed. Error: '%v'\n", err)
@@ -219,7 +224,7 @@ func (db *Database) SelectGenre() ([]*models.Genre, error) {
 }
 
 // SelectAuthor represents sql-query SELECT for table AUTHOR
-func (db *Database) SelectAuthor() ([]*models.Author, error) {
+func (db *Database) SelectAUTHOR() ([]*models.Author, error) {
 	rows, err := db.PostgresConn.Query(`SELECT * FROM AUTHOR`)
 	if err != nil {
 		log.Printf("Select() for table `AUTHOR` not passed. Error: '%v'\n", err)
@@ -251,7 +256,7 @@ func (db *Database) SelectAuthor() ([]*models.Author, error) {
 }
 
 // SelectAlbum represents sql-query SELECT for table `ALBUM`
-func (db *Database) SelectAlbum() ([]*models.Album, error) {
+func (db *Database) SelectALBUM() ([]*models.Album, error) {
 	rows, err := db.PostgresConn.Query(`SELECT * FROM ALBUM`)
 	if err != nil {
 		log.Printf("Select() for table `ALBUM` not passed. Error: '%v'\n", err)
