@@ -31,7 +31,8 @@ func run() error {
 		return err
 	}
 
-	files, err := sort.Variant1()
+	root := "./readData"
+	files, err := sort.Variant1(root)
 	if err != nil {
 		fmt.Printf(" variant2(), Error: '%v'\n", err)
 		return err
@@ -81,9 +82,9 @@ func run() error {
 		fmt.Println()
 	}
 
-	//if err := sort.DropAllTables(getPostgres); err != nil{
-	//	return err
-	//}
+	if err := sort.DropAllTables(getPostgres); err != nil {
+		return err
+	}
 
 	return nil
 }
