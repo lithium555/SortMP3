@@ -8,7 +8,7 @@ type Genre struct {
 
 // Author represents author fields in table `AUTHOR`
 type Author struct {
-	AuthorID   uint64
+	AuthorID   int
 	AuthorName string
 }
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/dhowden/tag"
 	_ "github.com/lib/pq"
@@ -18,16 +19,16 @@ func main() {
 }
 
 func run() error {
-	db, err := postgres.GetPostgresConnection()
+	postgres, err := postgres.GetPostgresConnection()
 	if err != nil {
 		log.Printf("postgre.GetConnection() = '%v'\n", err)
 		return err
 	}
+	defer postgres.Close()
 
-	getPostgres := postgres.Database{PostgresConn: db}
-	fmt.Printf("getPostgres = '%v'\n", getPostgres)
+	fmt.Printf("postgres = '%v'\n", postgres)
 
-	if err := sort.CreateTables(getPostgres); err != nil {
+	if err := sort.CreateTables(postgres); err != nil {
 		return err
 	}
 
@@ -38,9 +39,14 @@ func run() error {
 		return err
 	}
 
-	for _, file := range files {
-		fmt.Println(file)
-		mp3, err := os.Open(file)
+	for _, filepath := range files {
+		fmt.Printf("Road to file, which we Open: '%v'\n", filepath)
+		if strings.Contains(filepath, ".jpg") {
+			fmt.Printf("This is a picture: '%v'\n", filepath)
+			continue
+		}
+
+		mp3, err := os.Open(filepath)
 		if err != nil {
 			log.Printf("os.open(), Error: '%v'\n", err)
 			return err
@@ -51,14 +57,23 @@ func run() error {
 			log.Printf("tag.ReadFrom(mp3), error: '%v'\n", err)
 			continue
 		}
-		authorID, err := getPostgres.InsertAUTHOR(md.Artist())
+
+		var authorID int
+		id, err := postgres.InsertAUTHOR(md.Artist())
 		if err != nil {
-			log.Printf("InsertAUTHOR(), Errror: '%v'\n", err)
-			return err
+			//log.Printf("InsertAUTHOR(), Errror: '%v'\n", err)
+			existsAuthorID, err := postgres.GetExistsAuthor(md.Artist())
+			if err != nil {
+				log.Println("Error in func GetExistsAuthor()")
+				return err
+			}
+			authorID = existsAuthorID.AuthorID
+		} else {
+			authorID = id
 		}
 		fmt.Printf(">>>>>>>>>>>>>>>>authorID = '%v'\n", authorID)
 
-		genreID, err := getPostgres.InsertGENRE(md.Genre())
+		genreID, err := postgres.InsertGENRE(md.Genre())
 		if err != nil {
 			log.Printf("InsertIntoTableGENRE(). Error: '%v'\n", err)
 			return err
@@ -67,14 +82,14 @@ func run() error {
 
 		numberOfTrack, _ := md.Track()
 
-		albumID, err := getPostgres.InsertALBUM(authorID, md.Album(), md.Year(), "")
+		albumID, err := postgres.InsertALBUM(authorID, md.Album(), md.Year(), "")
 		if err != nil {
 			log.Printf("InsertALBUM(), Error: '%v'\n", err)
 			return err
 		}
 		fmt.Printf("========================albumID = '%v'\n", albumID)
 
-		err = getPostgres.InsertSONG(md.Title(), albumID, genreID, authorID, numberOfTrack)
+		err = postgres.InsertSONG(md.Title(), albumID, genreID, authorID, numberOfTrack)
 		if err != nil {
 			log.Printf("InsertSONG(), Error: '%v'\n", err)
 			return err
@@ -82,7 +97,7 @@ func run() error {
 		fmt.Println()
 	}
 
-	if err := sort.DropAllTables(getPostgres); err != nil {
+	if err := sort.DropAllTables(postgres); err != nil {
 		return err
 	}
 

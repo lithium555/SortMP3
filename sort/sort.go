@@ -12,25 +12,18 @@ import (
 
 // CreateTables will create 4 tables for the project: GENRE, AUTHOR, ALBUM, SONG
 func CreateTables(getPostgres postgres.Database) error {
-	if err := getPostgres.CreateTable(postgres.CreateTableGENRE); err != nil {
-		log.Printf("Can`t  create table `GENRE`, error: '%v'\n", err)
-		return err
+	for _, query := range []string{
+		postgres.CreateTableGENRE,
+		postgres.CreateTableAUTHOR,
+		postgres.CreateTableALBUM,
+		postgres.CreateTableSONG,
+	} {
+		if err := getPostgres.CreateTable(query); err != nil {
+			log.Printf("Can`t  '%v', error: '%v'\n", query, err)
+			return err
+		}
 	}
 
-	if err := getPostgres.CreateTable(postgres.CreateTableAUTHOR); err != nil {
-		log.Printf("Can`t  create table `AUTHOR`, error: '%v'\n", err)
-		return err
-	}
-
-	if err := getPostgres.CreateTable(postgres.CreateTableALBUM); err != nil {
-		log.Printf("Can`t  create table `ALBUM`, error: '%v'\n", err)
-		return err
-	}
-
-	if err := getPostgres.CreateTable(postgres.CreateTableSONG); err != nil {
-		log.Printf("Can`t  create table `SONG`, error: '%v'\n", err)
-		return err
-	}
 	return nil
 }
 
@@ -53,7 +46,9 @@ func Variant1(root string) ([]string, error) {
 	var files []string
 
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		files = append(files, path)
+		if !info.IsDir() { // Если это не директория а файл, то добавляем путь в слайс
+			files = append(files, path)
+		}
 		return nil
 	})
 	if err != nil {

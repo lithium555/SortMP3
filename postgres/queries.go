@@ -9,7 +9,7 @@ const (
 	// CreateTableAUTHOR represents query for creating table AUTHOR. +
 	CreateTableAUTHOR = `CREATE TABLE IF NOT EXISTS AUTHOR (
 												"id" SERIAL PRIMARY KEY, 
-												"author_name" TEXT
+												"author_name" TEXT UNIQUE
 	);`
 	// CreateTableALBUM represents query for creating table ALBUM.
 	CreateTableALBUM = `CREATE TABLE IF NOT EXISTS ALBUM (

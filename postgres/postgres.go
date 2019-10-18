@@ -26,23 +26,26 @@ const (
 )
 
 // GetPostgresConnection represents connection to PostgresDB
-func GetPostgresConnection() (*sql.DB, error) {
+func GetPostgresConnection() (Database, error) {
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s "+
 		"password=%s dbname=%s sslmode=disable",
 		host, port, user, password, dbname)
 	db, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
 		log.Errorf("Postgres connection error: '%v'\n", err)
-		return nil, err
+		return Database{}, err
 	}
 
 	err = db.Ping()
 	if err != nil {
 		log.Errorf("Postgres Ping() failed. Error: '%v'\n", err)
-		return nil, err
+		return Database{}, err
 	}
 	log.Println("Postgres successfully connected!")
-	return db, nil
+
+	getPostgres := Database{PostgresConn: db}
+
+	return getPostgres, nil
 }
 
 // Database represents implementation, how to access to the Postgres database
@@ -123,8 +126,8 @@ func (db *Database) InsertAUTHOR(author string) (int, error) {
 func (db *Database) InsertALBUM(authorID int, albumName string, albumYear int, cover string) (int, error) {
 	var albumID int
 	err := db.PostgresConn.QueryRow(`
-		INSERT INTO ALBUM(id, author_id, album_name, album_year, cover)
-		VALUES (DEFAULT, $1, $2, $3, $4)
+		INSERT INTO ALBUM(author_id, album_name, album_year, cover)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id
 	`, authorID, albumName, albumYear, cover).Scan(&albumID)
 	if err != nil {
@@ -156,16 +159,40 @@ func (db *Database) Drop(sqlQuery string) error {
 	return nil
 }
 
+// GetExistsAuthor will will find Author, which exists.
+func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
+	// TODO: fix query: SELECT id FROM AUTHOR WHERE author_name = ?;
+	rows, err := db.PostgresConn.Query(`SELECT id FROM AUTHOR WHERE author_name = ?;`, author)
+	if err != nil {
+		log.Println("Func GetExistsAuthor()")
+		return models.Author{}, err
+	}
+	defer rows.Close()
+
+	var existAuthor models.Author
+	for rows.Next() {
+		err := rows.Scan(existAuthor.AuthorID, existAuthor.AuthorName)
+		if err != nil {
+			log.Errorf("Func GetExistsAuthor(). Error in rows.Scan(). Error: '%v'\n", err)
+			return models.Author{}, err
+		}
+	}
+
+	return existAuthor, nil
+}
+
 // SelectSONG represents sql SELECT query for table SONG.
 func (db *Database) SelectSONG() ([]*models.Song, error) {
-	rows, err := db.PostgresConn.Query(`SELECT * FROM SONG`)
+	rows, err := db.PostgresConn.Query(`
+			SELECT id, name_of_song, album_id, genre_id, author_id, track_number 
+			FROM SONG`)
 	if err != nil {
 		log.Printf("Select() for table `SONG` not passed. Error: '%v'\n", err)
 		return nil, err
 	}
 	defer rows.Close()
 
-	songs := make([]*models.Song, 0)
+	var songs []*models.Song
 	for rows.Next() {
 		song := new(models.Song)
 		err := rows.Scan(&song.SongID, &song.NameOfSong, &song.AlbumID, &song.GenreID, &song.AuthorID, &song.TrackNumber)
@@ -192,9 +219,11 @@ func (db *Database) SelectSONG() ([]*models.Song, error) {
 	return songs, nil
 }
 
-// SelectGenre represents sql SELECT query for table GENRE.
+// SelectGENRE represents sql SELECT query for table GENRE.
 func (db *Database) SelectGENRE() ([]*models.Genre, error) {
-	rows, err := db.PostgresConn.Query(`SELECT * FROM GENRE`)
+	rows, err := db.PostgresConn.Query(`
+		SELECT id, genre_name 
+		FROM GENRE`)
 	if err != nil {
 		log.Printf("Select() for table `GENRE` not passed. Error: '%v'\n", err)
 		return nil, err
@@ -223,9 +252,11 @@ func (db *Database) SelectGENRE() ([]*models.Genre, error) {
 	return genre, nil
 }
 
-// SelectAuthor represents sql-query SELECT for table AUTHOR
+// SelectAUTHOR represents sql-query SELECT for table AUTHOR
 func (db *Database) SelectAUTHOR() ([]*models.Author, error) {
-	rows, err := db.PostgresConn.Query(`SELECT * FROM AUTHOR`)
+	rows, err := db.PostgresConn.Query(`
+			SELECT id, author_name 
+			FROM AUTHOR`)
 	if err != nil {
 		log.Printf("Select() for table `AUTHOR` not passed. Error: '%v'\n", err)
 		return nil, err
@@ -255,9 +286,11 @@ func (db *Database) SelectAUTHOR() ([]*models.Author, error) {
 	return authors, nil
 }
 
-// SelectAlbum represents sql-query SELECT for table `ALBUM`
+// SelectALBUM represents sql-query SELECT for table `ALBUM`
 func (db *Database) SelectALBUM() ([]*models.Album, error) {
-	rows, err := db.PostgresConn.Query(`SELECT * FROM ALBUM`)
+	rows, err := db.PostgresConn.Query(`
+			SELECT id, author_id, album_name, album_year, cover  
+			FROM ALBUM`)
 	if err != nil {
 		log.Printf("Select() for table `ALBUM` not passed. Error: '%v'\n", err)
 		return nil, err
