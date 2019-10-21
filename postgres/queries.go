@@ -4,7 +4,7 @@ const (
 	// CreateTableGENRE represents query for creating table GENRE.  +
 	CreateTableGENRE = `CREATE TABLE IF NOT EXISTS GENRE (
 												"id" SERIAL PRIMARY KEY, 
-												"genre_name" TEXT
+												"genre_name" TEXT UNIQUE
 	);`
 	// CreateTableAUTHOR represents query for creating table AUTHOR. +
 	CreateTableAUTHOR = `CREATE TABLE IF NOT EXISTS AUTHOR (
@@ -17,7 +17,7 @@ const (
 												"author_id" INT, 
 												"album_name" TEXT,
 												"album_year" INT,
-												"cover" TEXT
+												"cover" TEXT UNIQUE
 	);`
 	// CreateTableSONG represents query for creating table SONG.  +
 	CreateTableSONG = `CREATE TABLE IF NOT EXISTS SONG(  

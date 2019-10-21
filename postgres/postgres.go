@@ -159,10 +159,9 @@ func (db *Database) Drop(sqlQuery string) error {
 	return nil
 }
 
-// GetExistsAuthor will will find Author, which exists.
+// GetExistsAuthor will find AuthorID, if this author exists in table `AUTHOR`
 func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
-	// TODO: fix query: SELECT id FROM AUTHOR WHERE author_name = ?;
-	rows, err := db.PostgresConn.Query(`SELECT id FROM AUTHOR WHERE author_name = ?`, &author)
+	rows, err := db.PostgresConn.Query(`SELECT id FROM AUTHOR WHERE author_name = $1;`, author)
 	if err != nil {
 		log.Println("Func GetExistsAuthor()")
 		return models.Author{}, err
@@ -171,7 +170,7 @@ func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
 
 	var existAuthor models.Author
 	for rows.Next() {
-		err := rows.Scan(&existAuthor.AuthorID, &existAuthor.AuthorName)
+		err := rows.Scan(&existAuthor.AuthorID)
 		if err != nil {
 			log.Errorf("Func GetExistsAuthor(). Error in rows.Scan(). Error: '%v'\n", err)
 			return models.Author{}, err
@@ -179,6 +178,48 @@ func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
 	}
 
 	return existAuthor, nil
+}
+
+// GetExistsGenre will find genrteID if this genre exits in table `GENRE`
+func (db *Database) GetExistsGenre(genreName string) (models.Genre, error) {
+	rows, err := db.PostgresConn.Query(`SELECT id FROM GENRE WHERE genre_name = $1;`, genreName)
+	if err != nil {
+		log.Println("Func GetExistsGenre()")
+		return models.Genre{}, err
+	}
+	defer rows.Close()
+
+	var genreExist models.Genre
+	for rows.Next() {
+		err := rows.Scan(&genreExist.GenreID)
+		if err != nil {
+			log.Errorf("Func  GetExistsGenre(). Error in rows.Scan(). Error: '%v'\n", err)
+			return models.Genre{}, err
+		}
+	}
+	return genreExist, nil
+}
+
+// GetExistsAlbum will find albumID if this album exists in table `ALBUM`
+func (db *Database) GetExistsAlbum(authorID int, albumName string, albumYear int) (models.Album, error) {
+	rows, err := db.PostgresConn.Query(`
+		SELECT id FROM ALBUM 
+		WHERE author_id = $1 AND album_name = $2 AND album_year = $3`, authorID, albumName, albumYear)
+	if err != nil {
+		log.Println("Func GetExistsAlbum()")
+		return models.Album{}, err
+	}
+	defer rows.Close()
+
+	var albumExist models.Album
+	for rows.Next() {
+		err := rows.Scan(&albumExist.AlbumID)
+		if err != nil {
+			log.Errorf("Func  GetExistsAlbum(). Error in rows.Scan(). Error: '%v'\n", err)
+			return models.Album{}, err
+		}
+	}
+	return albumExist, nil
 }
 
 // SelectSONG represents sql SELECT query for table SONG.

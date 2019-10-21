@@ -2,7 +2,7 @@ package models
 
 // Genre represents genre fields in table `GENRE`
 type Genre struct {
-	GenreID   uint64
+	GenreID   int
 	GenreName string
 }
 
@@ -14,7 +14,7 @@ type Author struct {
 
 // Album represents album fields in table `ALBUM`
 type Album struct {
-	AlbumID   uint64
+	AlbumID   int
 	AuthorID  int
 	AlbumName string
 	AlbumYear int

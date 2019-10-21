@@ -73,19 +73,35 @@ func run() error {
 		}
 		fmt.Printf(">>>>>>>>>>>>>>>>authorID = '%v'\n", authorID)
 
-		genreID, err := postgres.InsertGENRE(md.Genre())
+		var genreID int
+		genID, err := postgres.InsertGENRE(md.Genre())
 		if err != nil {
-			log.Printf("InsertIntoTableGENRE(). Error: '%v'\n", err)
-			return err
+			existGenre, err := postgres.GetExistsGenre(md.Genre())
+			if err != nil {
+				log.Println("Error in func GetExistsGenre()")
+				return err
+			}
+			genreID = existGenre.GenreID
+		} else {
+			genreID = genID
 		}
 		fmt.Printf("+++++++++++++++++++++genreID = '%v'\n", genreID)
 
 		numberOfTrack, _ := md.Track()
 
-		albumID, err := postgres.InsertALBUM(authorID, md.Album(), md.Year(), "")
+		var albumID int
+		albID, err := postgres.InsertALBUM(authorID, md.Album(), md.Year(), "")
 		if err != nil {
-			log.Printf("InsertALBUM(), Error: '%v'\n", err)
-			return err
+			// Sometimes name of albums are the same, but if we will sekk them by 3 arguments,
+			// like in this func GetExistsAlbum()
+			album, err := postgres.GetExistsAlbum(authorID, md.Album(), md.Year())
+			if err != nil {
+				log.Println("Error in func GetExistsAlbum()")
+				return err
+			}
+			albumID = album.AlbumID
+		} else {
+			albumID = albID
 		}
 		fmt.Printf("========================albumID = '%v'\n", albumID)
 
