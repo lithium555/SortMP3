@@ -162,7 +162,7 @@ func (db *Database) Drop(sqlQuery string) error {
 // GetExistsAuthor will will find Author, which exists.
 func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
 	// TODO: fix query: SELECT id FROM AUTHOR WHERE author_name = ?;
-	rows, err := db.PostgresConn.Query(`SELECT id FROM AUTHOR WHERE author_name = ?;`, author)
+	rows, err := db.PostgresConn.Query(`SELECT id FROM AUTHOR WHERE author_name = ?`, &author)
 	if err != nil {
 		log.Println("Func GetExistsAuthor()")
 		return models.Author{}, err
@@ -171,7 +171,7 @@ func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
 
 	var existAuthor models.Author
 	for rows.Next() {
-		err := rows.Scan(existAuthor.AuthorID, existAuthor.AuthorName)
+		err := rows.Scan(&existAuthor.AuthorID, &existAuthor.AuthorName)
 		if err != nil {
 			log.Errorf("Func GetExistsAuthor(). Error in rows.Scan(). Error: '%v'\n", err)
 			return models.Author{}, err
