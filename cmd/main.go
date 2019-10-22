@@ -42,7 +42,7 @@ func run() error {
 	for _, filepath := range files {
 		fmt.Printf("Road to file, which we Open: '%v'\n", filepath)
 		if !strings.Contains(filepath, ".mp3") {
-			fmt.Printf("This is a picture, doc, or png file: '%v'\n", filepath)
+			fmt.Printf("This is not MP3 file: '%v'\n", filepath)
 			continue
 		}
 

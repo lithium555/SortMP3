@@ -17,11 +17,11 @@ const (
 
 	// TableGenre represents table GENRE from postgres database.
 	TableGenre = "GENRE"
-	// TableAuthor represents table GENRE from postgres database.
+	// TableAuthor represents table AUTHOR from postgres database.
 	TableAuthor = "AUTHOR"
-	// TableAlbum represents table GENRE from postgres database.
+	// TableAlbum represents table ALBUM from postgres database.
 	TableAlbum = "ALBUM"
-	// TableSong represents table GENRE from postgres database.
+	// TableSong represents table SONG from postgres database.
 	TableSong = "SONG"
 )
 
@@ -99,7 +99,9 @@ func (db *Database) InsertIntoTableGENRETest() error {
 func (db *Database) AddGenre(genreName string) (int, error) {
 	// Maybe this genre exists in our table `GENRE`, lets try to find it.
 	existGenre, err := db.GetExistsGenre(genreName)
-	if err != nil {
+	if err == nil {
+		return existGenre.GenreID, nil
+	} else {
 		// If we can`t find Genre, let`s add it into table `GENRE`
 		var genreID int
 		err := db.GetConnection().QueryRow(`
@@ -113,15 +115,15 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 		}
 		return genreID, nil
 	}
-
-	return existGenre.GenreID, nil
 }
 
 // AddAuthor represents the record insertion into table `AUTHOR`.
 func (db *Database) AddAuthor(author string) (int, error) {
 	// Maybe Author exist in our table, so let`s try to find his ID in a table
 	existsAuthor, err := db.GetExistsAuthor(author)
-	if err != nil {
+	if err == nil {
+		return existsAuthor.AuthorID, nil
+	} else {
 		// If Author not exist in our table - lets Insert him to table
 		var authorID int
 		err := db.PostgresConn.QueryRow(`
@@ -133,9 +135,7 @@ func (db *Database) AddAuthor(author string) (int, error) {
 			return 0, err
 		}
 		return authorID, nil
-
 	}
-	return existsAuthor.AuthorID, nil
 }
 
 // AddAlbum represents the record insertion into table `ALBUM`
@@ -145,7 +145,9 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 	// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
 	// like in this func GetExistsAlbum()
 	album, err := db.GetExistsAlbum(authorID, albumName, albumYear)
-	if err != nil {
+	if err == nil {
+		return album.AlbumID, nil
+	} else {
 		// if this album doesnt exist in table, lets Insert it into table:
 		var albumID int
 		err := db.PostgresConn.QueryRow(`
@@ -159,8 +161,6 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 		}
 		return albumID, nil
 	}
-
-	return album.AlbumID, nil
 }
 
 // InsertSONG represents the record insertion into table `SONG`
