@@ -23,7 +23,7 @@ type Album struct {
 
 // Song represents song fields in table `SONG`
 type Song struct {
-	SongID      uint64
+	SongID      int
 	NameOfSong  string
 	AlbumID     int
 	GenreID     int

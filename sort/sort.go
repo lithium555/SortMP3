@@ -29,7 +29,7 @@ func CreateTables(getPostgres postgres.Database) error {
 
 // DropAllTables will drop all tables: GENRE, AUTHOR, ALBUM, SONG
 func DropAllTables(getPostgres postgres.Database) error {
-	allTables := []string{postgres.DropGenre, postgres.DropAuthor, postgres.DropAlbum, postgres.DropSong}
+	allTables := []string{postgres.TableGenre, postgres.TableAuthor, postgres.TableAlbum, postgres.TableSong}
 	for _, table := range allTables {
 		if err := getPostgres.Drop(table); err != nil {
 			return err

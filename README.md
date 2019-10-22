@@ -99,3 +99,9 @@ https://github.com/dhowden/tag
 
 
 https://stackoverflow.com/questions/24712463/go-there-is-no-parameter-1
+
+
+Да, в остальных тоже. Postgres по умолчанию ставить значения полям если ты их не 
+указал. Если это SERIAL, то он генерит новый ключ. Если есть DEFAULT в 
+объявлении таблицы - использует его. И если нет ни того ни другого, 
+то поле будет NULL.

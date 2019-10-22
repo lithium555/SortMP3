@@ -41,8 +41,8 @@ func run() error {
 
 	for _, filepath := range files {
 		fmt.Printf("Road to file, which we Open: '%v'\n", filepath)
-		if strings.Contains(filepath, ".jpg") {
-			fmt.Printf("This is a picture: '%v'\n", filepath)
+		if !strings.Contains(filepath, ".mp3") {
+			fmt.Printf("This is a picture, doc, or png file: '%v'\n", filepath)
 			continue
 		}
 
@@ -58,50 +58,25 @@ func run() error {
 			continue
 		}
 
-		var authorID int
-		id, err := postgres.InsertAUTHOR(md.Artist())
+		authorID, err := postgres.AddAuthor(md.Artist())
 		if err != nil {
-			//log.Printf("InsertAUTHOR(), Errror: '%v'\n", err)
-			existsAuthorID, err := postgres.GetExistsAuthor(md.Artist())
-			if err != nil {
-				log.Println("Error in func GetExistsAuthor()")
-				return err
-			}
-			authorID = existsAuthorID.AuthorID
-		} else {
-			authorID = id
+			log.Printf("AddAuthor(), Error: '%v'\n", err)
+			return err
 		}
 		fmt.Printf(">>>>>>>>>>>>>>>>authorID = '%v'\n", authorID)
 
-		var genreID int
-		genID, err := postgres.InsertGENRE(md.Genre())
+		genreID, err := postgres.AddGenre(md.Genre())
 		if err != nil {
-			existGenre, err := postgres.GetExistsGenre(md.Genre())
-			if err != nil {
-				log.Println("Error in func GetExistsGenre()")
-				return err
-			}
-			genreID = existGenre.GenreID
-		} else {
-			genreID = genID
+			log.Printf("AddGenre(), Error: '%v'\n", err)
+			return err
 		}
 		fmt.Printf("+++++++++++++++++++++genreID = '%v'\n", genreID)
 
 		numberOfTrack, _ := md.Track()
 
-		var albumID int
-		albID, err := postgres.InsertALBUM(authorID, md.Album(), md.Year(), "")
+		albumID, err := postgres.AddAlbum(authorID, md.Album(), md.Year(), "")
 		if err != nil {
-			// Sometimes name of albums are the same, but if we will sekk them by 3 arguments,
-			// like in this func GetExistsAlbum()
-			album, err := postgres.GetExistsAlbum(authorID, md.Album(), md.Year())
-			if err != nil {
-				log.Println("Error in func GetExistsAlbum()")
-				return err
-			}
-			albumID = album.AlbumID
-		} else {
-			albumID = albID
+			return err
 		}
 		fmt.Printf("========================albumID = '%v'\n", albumID)
 
