@@ -4,12 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 )
-
-func main() {
-	fmt.Println("Hello, playground")
-}
 
 // Create creates new record in DB
 func Create(ctx context.Context, dbc *sql.DB) (int64, error) {
@@ -17,7 +12,7 @@ func Create(ctx context.Context, dbc *sql.DB) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer tx.Rollback()
+	defer tx.Rollback() // nolint yes we can do not check error, when we use defer
 
 	completed := 10
 	price := 100

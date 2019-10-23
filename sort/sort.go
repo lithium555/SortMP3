@@ -86,29 +86,6 @@ func variant2() ([]string, error) {
 	return files, nil
 }
 
-//func oldInserts(getPostgres postgres.Database) error{
-//	if err := getPostgres.InsertGENRE("melodic death"); err != nil {
-//		log.Printf("InsertIntoTableGENRE(). Error: '%v'\n", err)
-//		return err
-//	}
-//
-//	if err := getPostgres.InsertAUTHOR("Dark Tranquillity"); err != nil {
-//		log.Printf("InsertAUTHOR(), Errror: '%v'\n", err)
-//		return err
-//	}
-//	err := getPostgres.InsertALBUM(1, "The Gallery", 1995, "https://www.google.com/search?q=the+gallery+album&rlz=1C5CHFA_enUA852UA852&sxsrf=ACYBGNQDxJziTc5-WlMhYm4BhluCOmQOkQ:1569847250069&source=lnms&tbm=isch&sa=X&ved=0ahUKEwjxosTdyPjkAhXOlIsKHehlAdoQ_AUIEigB&biw=2560&bih=1248#imgdii=Yb50dLKiAQmnYM:&imgrc=FoCQKyna2fB3gM:")
-//	if err != nil {
-//		log.Printf("InsertALBUM(), Error: '%v'\n", err)
-//		return err
-//	}
-//
-//	if err := getPostgres.InsertSONG("Punish My Heaven", 45, 1, 5, 1); err != nil {
-//		log.Printf("InsertSONG(), Error: '%v'\n", err)
-//		return err
-//	}
-//	return nil
-//}
-
 func selectAll(getPostgres postgres.Database) error {
 	_, err := getPostgres.SelectSONG()
 	if err != nil {
