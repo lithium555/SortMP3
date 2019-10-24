@@ -104,14 +104,14 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 	}
 	// If we can`t find Genre, let`s add it into table `GENRE`
 	var genreID int
-	genreErr := db.GetConnection().QueryRow(`
+	err = db.GetConnection().QueryRow(`
 		INSERT INTO GENRE(genre_name) 
 			VALUES ($1) 	
 			RETURNING id
 		`, genreName).Scan(&genreID)
-	if genreErr != nil {
+	if err != nil {
 		log.Printf("Can`t insert genre `%v` into table. Error: '%v'\n", genreName, err)
-		return 0, genreErr
+		return 0, err
 	}
 
 	return genreID, nil
@@ -126,13 +126,13 @@ func (db *Database) AddAuthor(author string) (int, error) {
 	}
 	// If Author not exist in our table - lets Insert him to table
 	var authorID int
-	authorErr := db.PostgresConn.QueryRow(`
+	err = db.PostgresConn.QueryRow(`
 					INSERT INTO AUTHOR (author_name)
 					VALUES ($1) RETURNING id
 		`, author).Scan(&authorID)
-	if authorErr != nil {
+	if err != nil {
 		log.Printf("Can`t Insert new Author '%v' in func AddAuthor(); Error: '%v'\n", author, err)
-		return 0, authorErr
+		return 0, err
 	}
 
 	return authorID, nil
@@ -150,14 +150,14 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 	}
 	// if this album doesnt exist in table, lets Insert it into table:
 	var albumID int
-	albumErr := db.PostgresConn.QueryRow(`
+	err = db.PostgresConn.QueryRow(`
 			INSERT INTO ALBUM(author_id, album_name, album_year, cover)
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, authorID, albumName, albumYear, cover).Scan(&albumID)
-	if albumErr != nil {
+	if err != nil {
 		log.Printf("Can`t insert album '%v' into table in func AddAlbum(). Error: '%v'\n", albumName, err)
-		return 0, albumErr
+		return 0, err
 	}
 
 	return albumID, nil

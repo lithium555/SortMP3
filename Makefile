@@ -36,19 +36,6 @@ dependencies:
 	${call colored, dependensies is running...}
 	./scripts/get-dependencies.sh
 
-## Dev mode - go run
-dev:
-	${call colored, dev is running...}
-	#docker-compose up&
-	go run main.go
-.PHONY: dev
-
-## Compile binary
-compile:
-	${call colored, compile is running...}
-	./scripts/compile.sh
-.PHONY: compile
-
 ## lint project
 lint:
 	${call colored, lint is running...}
@@ -72,15 +59,6 @@ new-version: lint test compile
 	${call colored, new version is running...}
 	./scripts/version.sh
 .PHONY: new-version
-
-
-## Release
-release:
-	${call colored, release is running...}
-	./scripts/release.sh
-.PHONY: release
-
-.DEFAULT_GOAL := test
 
 
 ## Formats the code.
