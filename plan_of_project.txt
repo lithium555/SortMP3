@@ -2,6 +2,12 @@
 
 1) Первичная доработка базы:
 1.1) Foreing keys (FK), связать ИД между таблицами.
+    http://www.postgresqltutorial.com/postgresql-foreign-key/
+    https://postgrespro.ru/docs/postgresql/9.5/ddl-constraints
+
+    https://dba.stackexchange.com/questions/46410/how-do-i-insert-a-row-which-contains-a-foreign-key
+
+
 1.2) Обработчики ошибок. Разобраться как отличить типы ошибок: "нет записи", "конфликт по уникальному полю", "неверный FK".
 
 2) Поиск дубликатов по хешу

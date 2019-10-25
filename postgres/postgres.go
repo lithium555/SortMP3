@@ -163,10 +163,27 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 	return albumID, nil
 }
 
+/*
+TODO: fix query, which was:
+	INSERT INTO SONG(
+		name_of_song,
+		album_id,
+		genre_id,
+		author_id,
+		track_number)
+	VALUES ($1, $2, $3, $4, $5)
+
+https://dba.stackexchange.com/questions/46410/how-do-i-insert-a-row-which-contains-a-foreign-key
+*/
 // InsertSONG represents the record insertion into table `SONG`
 func (db *Database) InsertSONG(songName string, albumID int, genreID int, authorID int, trackNum int) error {
 	_, err := db.PostgresConn.Exec(`
-		INSERT INTO SONG(name_of_song, album_id, genre_id, author_id, track_number)
+		INSERT INTO SONG(
+			name_of_song, 
+			('album_id', (SELECT id FROM album WHERE album_name = ))
+			genre_id, 
+			author_id, 
+			track_number)
 		VALUES ($1, $2, $3, $4, $5)
 	`, songName, albumID, genreID, authorID, trackNum)
 	if err != nil {
