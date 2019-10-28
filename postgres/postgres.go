@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/lithium555/SortMP3/models"
@@ -178,13 +179,13 @@ https://dba.stackexchange.com/questions/46410/how-do-i-insert-a-row-which-contai
 // InsertSONG represents the record insertion into table `SONG`
 func (db *Database) InsertSONG(songName string, albumID int, genreID int, authorID int, trackNum int) error {
 	_, err := db.PostgresConn.Exec(`
-		INSERT INTO SONG(
-			name_of_song, 
-			('album_id', (SELECT id FROM album WHERE album_name = ))
-			genre_id, 
-			author_id, 
-			track_number)
-		VALUES ($1, $2, $3, $4, $5)
+	INSERT INTO SONG(
+		name_of_song,
+		album_id,
+		genre_id,
+		author_id,
+		track_number)
+	VALUES ($1, $2, $3, $4, $5)
 	`, songName, albumID, genreID, authorID, trackNum)
 	if err != nil {
 		log.Printf("InsertSONG(), Error: '%v'\n", err)
@@ -209,6 +210,10 @@ func (db *Database) Drop(tableName string) error {
 // GetExistsAuthor will find AuthorID, if this author exists in table `AUTHOR`
 func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
 	rows, err := db.PostgresConn.Query(`SELECT id FROM AUTHOR WHERE author_name = $1;`, author)
+	count := checkRowsCount(rows)
+	if count == 0 {
+		return models.Author{}, errors.New("0 rows after query")
+	}
 	if err != nil {
 		log.Println("Func GetExistsAuthor()")
 		return models.Author{}, err
@@ -227,9 +232,23 @@ func (db *Database) GetExistsAuthor(author string) (models.Author, error) {
 	return existAuthor, nil
 }
 
+// checkRowsCount will check how many rows we have already got by current query
+func checkRowsCount(rows *sql.Rows) (count int) {
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			log.Fatal(err)
+		}
+	}
+	return count
+}
+
 // GetExistsGenre will find genrteID if this genre exits in table `GENRE`
 func (db *Database) GetExistsGenre(genreName string) (models.Genre, error) {
 	rows, err := db.PostgresConn.Query(`SELECT id FROM GENRE WHERE genre_name = $1;`, genreName)
+	count := checkRowsCount(rows)
+	if count == 0 {
+		return models.Genre{}, errors.New("0 rows after query")
+	}
 	if err != nil {
 		log.Println("Func GetExistsGenre()")
 		return models.Genre{}, err
@@ -252,6 +271,10 @@ func (db *Database) GetExistsAlbum(authorID int, albumName string, albumYear int
 	rows, err := db.PostgresConn.Query(`
 		SELECT id FROM ALBUM 
 		WHERE author_id = $1 AND album_name = $2 AND album_year = $3`, authorID, albumName, albumYear)
+	count := checkRowsCount(rows)
+	if count == 0 {
+		return models.Album{}, errors.New("0 rows after query")
+	}
 	if err != nil {
 		log.Println("Func GetExistsAlbum()")
 		return models.Album{}, err

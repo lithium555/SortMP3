@@ -120,3 +120,13 @@ https://stackoverflow.com/questions/24712463/go-there-is-no-parameter-1
 указал. Если это SERIAL, то он генерит новый ключ. Если есть DEFAULT в
 объявлении таблицы - использует его. И если нет ни того ни другого,
 то поле будет NULL.
+
+
+checkRowsCount:
+https://github.com/lib/pq/issues/472
+https://github.com/lib/pq/issues/695
+https://github.com/lib/pq/issues/254
+https://gist.github.com/trkrameshkumar/f4f1c00ef5d578561c96
+https://flaviocopes.com/golang-sql-database/
+https://www.alexedwards.net/blog/practical-persistence-sql
+
