@@ -1,0 +1,9 @@
+\.idea/
+/.env
+coverage.profile
+readData/
+
+release/
+
+\coverage.out
+coverage.out
