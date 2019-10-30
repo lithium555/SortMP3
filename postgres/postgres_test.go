@@ -2,10 +2,13 @@ package postgres
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"testing"
 
+	_ "github.com/lib/pq"
 	"github.com/ory/dockertest"
+	"github.com/stretchr/testify/assert"
 )
 
 func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
@@ -14,18 +17,23 @@ func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
 		t.Fatal(err)
 	}
 
-	cont, err := pool.Run("postgres", "latest", []string{
-		"POSTGRES_PASSWORD=postgres",
-	})
+	cont, err := pool.Run("postgres", "latest", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	const port = "5432/tcp"
-	addr := `postgres://postgres:postgres@` + cont.GetHostPort(port)
+	addr := cont.GetHostPort(port)
+
+	// Examples of connections:
+	// db, err := sql.Open("postgres", "user=test password=test dbname=test sslmode=disable")
+	// db, err := sql.Open("postgres", "postgres://username:password@localhost/db_name?sslmode=disable")
 
 	err = pool.Retry(func() error {
-		cli, err := sql.Open("postgres", addr)
+		connStr := "user=sorter password=master dbname=musicDB sslmode=disable"
+		fmt.Printf("connStr = '%v'\n", connStr)
+
+		cli, err := sql.Open("postgres", connStr)
 		if err != nil {
 			return err
 		}
@@ -54,3 +62,21 @@ func TestGetConnection(t *testing.T) {
 
 	log.Printf("conn = '%v'\n", conn)
 }
+
+func TestDatabase_AddAlbum(t *testing.T) {
+	conn, kill := CreatePostgresForTesting(t)
+	kill()
+
+	testDB := Database{
+		PostgresConn: conn,
+	}
+
+	errCreate := testDB.CreateTable(CreateTableALBUM)
+	fmt.Printf("errCreate = '%v'\n", errCreate)
+	assert.Nil(t, errCreate)
+
+	//gotID, gotErr := testDB.AddAlbum()
+
+}
+
+// https://postgresql.leopard.in.ua/
