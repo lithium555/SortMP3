@@ -74,7 +74,7 @@ func run() error {
 
 		numberOfTrack, _ := md.Track()
 
-		albumID, err := postgres.AddAlbum(authorID, md.Album(), md.Year(), "")
+		albumID, err := postgres.AddAlbum(authorID, md.Album(), md.Year(), nil)
 		if err != nil {
 			return err
 		}

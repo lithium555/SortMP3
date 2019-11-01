@@ -3,26 +3,26 @@ package postgres
 const (
 	// CreateTableGENRE represents query for creating table GENRE.  +
 	CreateTableGENRE = `CREATE TABLE IF NOT EXISTS genre (
-												id INT PRIMARY KEY, 
+												id SERIAL PRIMARY KEY, 
 												genre_name TEXT UNIQUE
 	);`
 	// CreateTableAUTHOR represents query for creating table AUTHOR. +
 	CreateTableAUTHOR = `CREATE TABLE IF NOT EXISTS author (
-												id INT PRIMARY KEY, 
+												id SERIAL PRIMARY KEY, 
 												author_name TEXT UNIQUE
 	);`
 	// CreateTableALBUM represents query for creating table ALBUM.
 	CreateTableALBUM = `CREATE TABLE IF NOT EXISTS album (
-												id INT PRIMARY KEY,
+												id SERIAL PRIMARY KEY,
 												author_id INT, 
 												album_name TEXT,
 												album_year INT,
-												cover TEXT UNIQUE, 
+												cover TEXT, 
 												FOREIGN KEY (author_id) REFERENCES author(id)
 	);`
 	// CreateTableSONG represents query for creating table SONG.  +
 	CreateTableSONG = `CREATE TABLE IF NOT EXISTS song(  
-												id INT PRIMARY KEY,
+												id SERIAL PRIMARY KEY,
 												name_of_song TEXT,
 												album_id INT,
 												genre_id INT,

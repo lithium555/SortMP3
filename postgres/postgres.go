@@ -140,7 +140,7 @@ func (db *Database) AddAuthor(author string) (int, error) {
 }
 
 // AddAlbum represents the record insertion into table `ALBUM`
-func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cover string) (int, error) {
+func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cover interface{}) (int, error) {
 	// Let`s try to find out name of this album in table, maybe he is exist.
 
 	// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
@@ -188,7 +188,7 @@ func (db *Database) InsertSONG(songName string, albumID int, genreID int, author
 func (db *Database) Drop(tableName string) error {
 	//TODO: fix deoping tables.
 	// http://jinzhu.me/gorm/database.html#migration
-	_, err := db.PostgresConn.Exec("DROP TABLE " + tableName + ";")
+	_, err := db.PostgresConn.Exec("DROP TABLE if exists " + tableName + " cascade;")
 
 	if err != nil {
 		log.Printf("DROP, Error: '%v'\n", err)
@@ -202,27 +202,15 @@ func (db *Database) GetExistsAuthor(author string) (int, error) {
 	var existAuthor models.Author
 
 	row := db.PostgresConn.QueryRow(`SELECT id FROM author WHERE author_name = $1;`, author)
-	if err := row.Scan(&existAuthor.AuthorID); err != nil {
-		if err == sql.ErrNoRows {
-			log.Errorf("Func GetExistsAuthor(). Zero rows found")
-			return 0, err
-		} else {
-			log.Errorf("Func GetExistsAuthor(). Error in row.Scan(). Error: '%v'\n", err)
-			return 0, err
-		}
+	if err := row.Scan(&existAuthor.AuthorID); err == sql.ErrNoRows {
+		log.Errorf("Func GetExistsAuthor(). Zero rows found")
+		return 0, err
+	} else if err != nil {
+		log.Errorf("Func GetExistsAuthor(). Error in row.Scan(). Error: '%v'\n", err)
+		return 0, err
 	}
 
 	return existAuthor.AuthorID, nil
-}
-
-// checkRowsCount will check how many rows we have already got by current query
-func checkRowsCount(rows *sql.Rows) (count int) {
-	for rows.Next() {
-		if err := rows.Scan(&count); err != nil {
-			log.Fatal(err)
-		}
-	}
-	return count
 }
 
 // GetExistsGenre will find genrteID if this genre exits in table `GENRE`
@@ -230,14 +218,12 @@ func (db *Database) GetExistsGenre(genreName string) (int, error) {
 	row := db.PostgresConn.QueryRow(`SELECT id FROM GENRE WHERE genre_name = $1;`, genreName)
 
 	var genreExist models.Genre
-	if err := row.Scan(&genreExist.GenreID); err != nil {
-		if err == sql.ErrNoRows {
-			log.Errorf("Func GetExistsGenre(): Zero rows found.")
-			return 0, err
-		} else {
-			log.Errorf("Func  GetExistsGenre(). Error in row.Scan(). Error: '%v'\n", err)
-			return 0, err
-		}
+	if err := row.Scan(&genreExist.GenreID); err == sql.ErrNoRows {
+		log.Errorf("Func GetExistsGenre(): Zero rows found.")
+		return 0, err
+	} else if err != nil {
+		log.Errorf("Func  GetExistsGenre(). Error in row.Scan(). Error: '%v'\n", err)
+		return 0, err
 	}
 
 	return genreExist.GenreID, nil
@@ -251,14 +237,12 @@ func (db *Database) GetExistsAlbum(authorID int, albumName string, albumYear int
 
 	var albumExist models.Album
 
-	if err := row.Scan(&albumExist.AlbumID); err != nil {
-		if err == sql.ErrNoRows {
-			log.Errorf("Func GetExistsAlbum(). Zero rows found.")
-			return 0, err
-		} else {
-			log.Errorf("Func  GetExistsAlbum(). Error in row.Scan(). Error: '%v'\n", err)
-			return 0, err
-		}
+	if err := row.Scan(&albumExist.AlbumID); err == sql.ErrNoRows {
+		log.Errorf("Func GetExistsAlbum(). Zero rows found.")
+		return 0, err
+	} else if err != nil {
+		log.Errorf("Func  GetExistsAlbum(). Error in row.Scan(). Error: '%v'\n", err)
+		return 0, err
 	}
 
 	return albumExist.AlbumID, nil
