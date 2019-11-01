@@ -30,7 +30,7 @@ func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
 	// db, err := sql.Open("postgres", "postgres://username:password@localhost/db_name?sslmode=disable")
 
 	err = pool.Retry(func() error {
-		connStr := "user=sorter password=master dbname=musicDB sslmode=disable"
+		connStr := "user=sorter password=master host=localhost port=5432 dbname=musicDB sslmode=disable"
 		fmt.Printf("connStr = '%v'\n", connStr)
 
 		cli, err := sql.Open("postgres", connStr)
