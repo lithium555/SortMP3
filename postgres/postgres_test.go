@@ -24,12 +24,13 @@ func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
 
 	const port = "5432/tcp"
 	addr := cont.GetHostPort(port)
-
+	fmt.Printf("addr = '%v'\n", addr)
 	// Examples of connections:
 	// db, err := sql.Open("postgres", "user=test password=test dbname=test sslmode=disable")
 	// db, err := sql.Open("postgres", "postgres://username:password@localhost/db_name?sslmode=disable")
 
 	err = pool.Retry(func() error {
+
 		connStr := "user=sorter password=master host=localhost port=5432 dbname=musicDB sslmode=disable"
 		fmt.Printf("connStr = '%v'\n", connStr)
 
