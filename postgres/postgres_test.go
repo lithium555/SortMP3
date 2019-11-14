@@ -9,6 +9,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
@@ -65,6 +66,7 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestDatabase_AddAlbum(t *testing.T) {
+	t.Skip()
 	conn, kill := CreatePostgresForTesting(t)
 	kill()
 
@@ -81,3 +83,78 @@ func TestDatabase_AddAlbum(t *testing.T) {
 }
 
 // https://postgresql.leopard.in.ua/
+
+//
+//сделай себе несколько тестов которые:
+//- пытаются найти запись которой нет
+//- пытаются внести дубликат по первичному ключу
+//- пытаются создать запись в неверным FK
+//и попробуй распознать эти ошибки
+//
+//func Example() {
+//	db, err := sql.Open("postgres",
+//		"host=localhost dbname=Test sslmode=disable user=postgres password=secret")
+//	if err != nil {
+//		log.Fatal("cannot connect ...")
+//	}
+//	defer db.Close()
+//	db.Exec(`set search_path='mySchema'`)
+//
+//	rows, err := db.Query(`select blah,blah2 from myTable`)
+//
+//}
+
+func CreateTablesForTest(getPostgres Database) error {
+	for _, query := range []string{
+		CreateTableGENRE,
+		CreateTableAUTHOR,
+		CreateTableALBUM,
+		CreateTableSONG,
+	} {
+		if err := getPostgres.CreateTable(query); err != nil {
+			log.Printf("Can`t  '%v', error: '%v'\n", query, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func DropTablesAfterTest(getPostgres Database) error {
+	for _, query := range []string{
+		CreateTableGENRE,
+		CreateTableAUTHOR,
+		CreateTableALBUM,
+		CreateTableSONG,
+	} {
+		if err := getPostgres.CreateTable(query); err != nil {
+			log.Printf("Can`t  '%v', error: '%v'\n", query, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// docker run --name sort_music -e POSTGRES_PASSWORD=master -e POSTGRES_DB=musicDB -e POSTGRES_USER=sorter -p 5432:5432 -d postgres
+func TestFindRecord(t *testing.T) {
+	db, err := GetPostgresConnection()
+	assert.Nil(t, err)
+
+	dropErr := DropTablesAfterTest(db)
+	assert.Nil(t, dropErr)
+
+	defer db.Close()
+
+	createErr := CreateTablesForTest(db)
+	assert.Nil(t, createErr)
+
+	author := "Dark Tranquillity"
+	var authorID int
+	err = db.PostgresConn.QueryRow(`
+					INSERT INTO author (author_name)
+					VALUES ($1) RETURNING id
+		`, author).Scan(&authorID)
+	require.Nil(t, err)
+	fmt.Println("New record authorID is:", authorID)
+
+}
