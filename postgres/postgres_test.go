@@ -10,6 +10,7 @@ import (
 	"github.com/ory/dockertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
@@ -18,7 +19,7 @@ func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
 		t.Fatal(err)
 	}
 
-	cont, err := pool.Run("postgres", "latest", nil)
+	cont, err := pool.Run("postgres", "latest", []string{"POSTGRES_PASSWORD=master", "POSTGRES_DB=musicDB"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,10 +33,9 @@ func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
 
 	err = pool.Retry(func() error {
 
-		connStr := "user=sorter password=master host=localhost port=5432 dbname=musicDB sslmode=disable"
-		fmt.Printf("connStr = '%v'\n", connStr)
+		//connStr := "user=sorter password=master host=localhost port=5432 dbname=musicDB sslmode=disable"
 
-		cli, err := sql.Open("postgres", connStr)
+		cli, err := sql.Open("postgres", fmt.Sprintf("postgres://postgres:master@%s/%s?sslmode=disable", addr, "musicDB"))
 		if err != nil {
 			return err
 		}
@@ -76,8 +76,9 @@ func TestDatabase_AddAlbum(t *testing.T) {
 
 	errCreate := testDB.CreateTable(CreateTableALBUM)
 	fmt.Printf("errCreate = '%v'\n", errCreate)
-	assert.Nil(t, errCreate)
+	fmt.Printf("errCreate.Error() ='%v'\n", errCreate.Error())
 
+	require.Nil(t, errCreate)
 	//gotID, gotErr := testDB.AddAlbum()
 
 }

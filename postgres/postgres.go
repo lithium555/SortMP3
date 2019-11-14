@@ -151,9 +151,7 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 	}
 	// if this album doesnt exist in table, lets Insert it into table:
 	var coverToInsert interface{}
-	if cover == "" {
-		coverToInsert = nil
-	} else {
+	if cover != "" {
 		coverToInsert = cover
 	}
 	var albumID int
@@ -194,7 +192,7 @@ func (db *Database) InsertSONG(songName string, albumID int, genreID int, author
 func (db *Database) Drop(tableName string) error {
 	//TODO: fix deoping tables.
 	// http://jinzhu.me/gorm/database.html#migration
-	_, err := db.PostgresConn.Exec("DROP TABLE if exists " + tableName + " cascade;")
+	_, err := db.PostgresConn.Exec("DROP TABLE if exists " + tableName + " ;")
 
 	if err != nil {
 		log.Printf("DROP, Error: '%v'\n", err)
