@@ -10,7 +10,6 @@ import (
 	"github.com/ory/dockertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/require"
 )
 
 func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
@@ -122,40 +121,94 @@ func CreateTablesForTest(getPostgres Database) error {
 }
 
 func DropTablesAfterTest(getPostgres Database) error {
-	for _, query := range []string{
-		CreateTableGENRE,
-		CreateTableAUTHOR,
-		CreateTableALBUM,
-		CreateTableSONG,
-	} {
-		if err := getPostgres.CreateTable(query); err != nil {
-			log.Printf("Can`t  '%v', error: '%v'\n", query, err)
+	allTables := []string{TableSong, TableAlbum, TableAuthor, TableGenre}
+	for _, table := range allTables {
+		if err := getPostgres.Drop(table); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// docker run --name sort_music -e POSTGRES_PASSWORD=master -e POSTGRES_DB=musicDB -e POSTGRES_USER=sorter -p 5432:5432 -d postgres
-func TestFindRecord(t *testing.T) {
+func workWithTables(t *testing.T) Database {
 	db, err := GetPostgresConnection()
 	assert.Nil(t, err)
 
 	dropErr := DropTablesAfterTest(db)
 	assert.Nil(t, dropErr)
 
-	defer db.Close()
-
 	createErr := CreateTablesForTest(db)
 	assert.Nil(t, createErr)
 
-	author := "Dark Tranquillity"
-	var authorID int
-	err = db.PostgresConn.QueryRow(`
-					INSERT INTO author (author_name)
-					VALUES ($1) RETURNING id
-		`, author).Scan(&authorID)
-	require.Nil(t, err)
-	fmt.Println("New record authorID is:", authorID)
+	return db
+}
 
+//сделай себе несколько тестов которые:
+//- пытаются найти запись которой нет
+func TestFindRecord(t *testing.T) {
+	t.Run("find record which doesnt exist in database", func(t *testing.T) {
+		db := workWithTables(t)
+		defer db.Close()
+
+		author := "System of a down" //"Dark Tranquillity"
+		var authorID int
+		err := db.PostgresConn.QueryRow(`
+						INSERT INTO author (author_name)
+						VALUES ($1) RETURNING id
+			`, author).Scan(&authorID)
+		//fmt.Printf("err.Error() = '%v'\n", err.Error())
+		require.Nil(t, err)
+		//fmt.Println("New record authorID is:", authorID)
+
+		expectError := "sql: no rows in result set"
+
+		gotVal, gotErr := db.GetExistsAuthor("Iwrestledabearonce")
+		require.Zero(t, gotVal)
+		require.Equal(t, expectError, gotErr.Error())
+	})
+
+	//- пытаются внести дубликат по первичному ключу
+	t.Run("insert duplicate by foreign key", func(t *testing.T) {
+		db := workWithTables(t)
+		defer db.Close()
+
+		authorID, err := db.AddAuthor("Dark Tranquillity")
+		assert.Nil(t, err)
+
+		albumYear := 1995
+		albumName := "The Gallery"
+		cover := ""
+
+		for i := 0; i < 2; i++ {
+			var albumID int
+			err = db.PostgresConn.QueryRow(`
+			INSERT INTO ALBUM(author_id, album_name, album_year, cover)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`, authorID, albumName, albumYear, cover).Scan(&albumID)
+			fmt.Printf("albumID = '%v'\n", albumID)
+			require.Nil(t, err)
+		}
+
+		//albumID, err := db.AddAlbum(authorID, "The Gallery", 1995, "")
+		//fmt.Printf("albumID = '%v'\n", albumID)
+		//fmt.Printf("err = '%v'\n", err)
+		//
+		//albumID2, err2 := db.AddAlbum(authorID, "The Gallery", 1995, "")
+		//fmt.Printf("albumID2 = '%v'\n", albumID2)
+		//fmt.Printf("err2 = '%v'\n", err2)
+
+		// нет ошибки
+		/*
+			albumID = '1'
+			err = '<nil>'
+			albumID2 = '1'
+			err2 = '<nil>'
+		*/
+	})
+
+	//- пытаются создать запись в неверным FK
+	t.Run("", func(t *testing.T) {
+
+	})
 }
