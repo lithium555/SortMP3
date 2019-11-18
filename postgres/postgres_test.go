@@ -6,6 +6,7 @@ import (
 	"log"
 	"testing"
 
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest"
 	"github.com/stretchr/testify/assert"
@@ -146,6 +147,12 @@ func workWithTables(t *testing.T) Database {
 //сделай себе несколько тестов которые:
 //- пытаются найти запись которой нет
 func TestFindRecord(t *testing.T) {
+
+	var (
+		albumYear = 1995
+		albumName = "The Gallery"
+		cover     = ""
+	)
 	t.Run("find record which doesnt exist in database", func(t *testing.T) {
 		db := workWithTables(t)
 		defer db.Close()
@@ -175,10 +182,6 @@ func TestFindRecord(t *testing.T) {
 		authorID, err := db.AddAuthor("Dark Tranquillity")
 		assert.Nil(t, err)
 
-		albumYear := 1995
-		albumName := "The Gallery"
-		cover := ""
-
 		for i := 0; i < 2; i++ {
 			var albumID int
 			err = db.PostgresConn.QueryRow(`
@@ -207,8 +210,92 @@ func TestFindRecord(t *testing.T) {
 		*/
 	})
 
-	//- пытаются создать запись в неверным FK
-	t.Run("", func(t *testing.T) {
+	// TODO: 1.2) Обработчики ошибок. Разобраться как отличить типы ошибок: "нет записи",
+	//  "конфликт по уникальному полю", "неверный FK".
 
+	t.Run("no such record in table", func(t *testing.T) {
+		db := workWithTables(t)
+
+		var albumID int
+		err := db.PostgresConn.QueryRow(`
+			SELECT id FROM author WHERE author_name = $1;
+		`, 555).Scan(&albumID)
+
+		expectError := "sql: no rows in result set"
+		require.Equal(t, expectError, err.Error())
 	})
+
+	t.Run("conflict by unique field", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := db.Drop("person")
+		require.Nil(t, dropErr)
+
+		_, err = db.PostgresConn.Exec(`
+			CREATE TABLE person (
+			   id serial PRIMARY KEY,
+			   first_name VARCHAR (50),
+			   last_name VARCHAR (50),
+			   email VARCHAR (50) UNIQUE
+			);`)
+		assert.Nil(t, err)
+
+		expectedErr := "pq: duplicate key value violates unique constraint"
+
+		var personID int
+		for i := 0; i < 3; i++ {
+			insertErr := db.PostgresConn.QueryRow(`
+				INSERT INTO person (first_name, last_name, email) 
+				VALUES($1, $2, $3)
+				RETURNING id`, "Slava", "Pinchuk", "development1810@gmail.com").Scan(&personID)
+
+			if i > 0 {
+				fmt.Printf("insertErr.Error() = '%v'\n", insertErr.Error())
+				require.Contains(t, insertErr.Error(), expectedErr)
+			}
+		}
+	})
+
+	//- пытаются создать запись в неверным FK
+	t.Run("create record with wrong Foreign Key", func(t *testing.T) {
+		db := workWithTables(t)
+
+		metalBands := []string{"Sepultura", "Suicide Silence"}
+
+		for _, v := range metalBands {
+			authorID, err := db.AddAuthor(v)
+			assert.Nil(t, err)
+
+			fmt.Printf("authorID = '%v'\n", authorID)
+		}
+
+		var albumID int
+		err := db.PostgresConn.QueryRow(`
+			INSERT INTO ALBUM(author_id, album_name, album_year, cover)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`, 555, albumName, albumYear, cover).Scan(&albumID)
+		fmt.Printf("albumID = '%v'\n", albumID)
+
+		fmt.Printf("err.Error() = '%v'\n", err.Error())
+		expectError := "pq: insert or update on table \"album\" violates foreign key constraint \"album_author_id_fkey\""
+
+		require.Equal(t, expectError, err.Error())
+
+		expectPart1 := "pq: insert or update on table"
+		expectPart2 := "violates foreign key constraint"
+
+		require.Contains(t, err.Error(), expectPart1)
+		require.Contains(t, err.Error(), expectPart2)
+
+		ErrorHandler(err)
+	})
+}
+
+func ErrorHandler(err error) {
+	if err, ok := err.(*pq.Error); ok {
+		fmt.Println(">>>>>>> pq error-Code:", err.Code)
+		fmt.Println(">>>>>>> pq error.Code.Name():", err.Code.Name())
+	}
 }
