@@ -120,7 +120,6 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 // AddAuthor represents the record insertion into table `AUTHOR`.
 func (db *Database) AddAuthor(author string) (int, error) {
 	// Maybe Author exist in our table, so let`s try to find his ID in a table
-	fmt.Printf("author = '%v'\n", author)
 	existsAuthorID, err := db.GetExistsAuthor(author)
 	if err == nil {
 		return existsAuthorID, nil

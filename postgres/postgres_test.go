@@ -192,22 +192,6 @@ func TestFindRecord(t *testing.T) {
 			fmt.Printf("albumID = '%v'\n", albumID)
 			require.Nil(t, err)
 		}
-
-		//albumID, err := db.AddAlbum(authorID, "The Gallery", 1995, "")
-		//fmt.Printf("albumID = '%v'\n", albumID)
-		//fmt.Printf("err = '%v'\n", err)
-		//
-		//albumID2, err2 := db.AddAlbum(authorID, "The Gallery", 1995, "")
-		//fmt.Printf("albumID2 = '%v'\n", albumID2)
-		//fmt.Printf("err2 = '%v'\n", err2)
-
-		// нет ошибки
-		/*
-			albumID = '1'
-			err = '<nil>'
-			albumID2 = '1'
-			err2 = '<nil>'
-		*/
 	})
 
 	// TODO: 1.2) Обработчики ошибок. Разобраться как отличить типы ошибок: "нет записи",
@@ -264,10 +248,8 @@ func TestFindRecord(t *testing.T) {
 		metalBands := []string{"Sepultura", "Suicide Silence"}
 
 		for _, v := range metalBands {
-			authorID, err := db.AddAuthor(v)
+			_, err := db.AddAuthor(v)
 			assert.Nil(t, err)
-
-			fmt.Printf("authorID = '%v'\n", authorID)
 		}
 
 		var albumID int
@@ -276,20 +258,8 @@ func TestFindRecord(t *testing.T) {
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, 555, albumName, albumYear, cover).Scan(&albumID)
-		fmt.Printf("albumID = '%v'\n", albumID)
 
-		fmt.Printf("err.Error() = '%v'\n", err.Error())
-		expectError := "pq: insert or update on table \"album\" violates foreign key constraint \"album_author_id_fkey\""
-
-		require.Equal(t, expectError, err.Error())
-
-		expectPart1 := "pq: insert or update on table"
-		expectPart2 := "violates foreign key constraint"
-
-		require.Contains(t, err.Error(), expectPart1)
-		require.Contains(t, err.Error(), expectPart2)
-
-		ErrorHandler(err)
+		fmt.Printf("Conver = '%v'\n", convertError(err))
 	})
 }
 
