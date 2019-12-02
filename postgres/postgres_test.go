@@ -2,8 +2,10 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/lib/pq"
@@ -163,15 +165,19 @@ func TestFindRecord(t *testing.T) {
 						INSERT INTO author (author_name)
 						VALUES ($1) RETURNING id
 			`, author).Scan(&authorID)
-		//fmt.Printf("err.Error() = '%v'\n", err.Error())
 		require.Nil(t, err)
-		//fmt.Println("New record authorID is:", authorID)
 
-		expectError := "sql: no rows in result set"
+		//expectError := "sql: no rows in result set"
 
 		gotVal, gotErr := db.GetExistsAuthor("Iwrestledabearonce")
 		require.Zero(t, gotVal)
-		require.Equal(t, expectError, gotErr.Error())
+		//require.Equal(t, expectError, gotErr.Error())
+		if errors.Is(err, os.ErrExist){
+			//TODO: what should we do with errors from convertError func?
+			valErr := convertError(gotErr)
+			fmt.Printf("Error from 'erros.go': = '%v'\n", valErr)
+		}
+		//TODO: what should we do with errors IS NOT FROM convertError() func?
 	})
 
 	//- пытаются внести дубликат по первичному ключу
@@ -189,7 +195,6 @@ func TestFindRecord(t *testing.T) {
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, authorID, albumName, albumYear, cover).Scan(&albumID)
-			fmt.Printf("albumID = '%v'\n", albumID)
 			require.Nil(t, err)
 		}
 	})
@@ -225,7 +230,7 @@ func TestFindRecord(t *testing.T) {
 			);`)
 		assert.Nil(t, err)
 
-		expectedErr := "pq: duplicate key value violates unique constraint"
+		//expectedErr := "pq: duplicate key value violates unique constraint"
 
 		var personID int
 		for i := 0; i < 3; i++ {
@@ -235,8 +240,14 @@ func TestFindRecord(t *testing.T) {
 				RETURNING id`, "Slava", "Pinchuk", "development1810@gmail.com").Scan(&personID)
 
 			if i > 0 {
-				fmt.Printf("insertErr.Error() = '%v'\n", insertErr.Error())
-				require.Contains(t, insertErr.Error(), expectedErr)
+				//fmt.Printf("insertErr.Error() = '%v'\n", insertErr.Error())
+				//require.Contains(t, insertErr.Error(), expectedErr)
+				//fmt.Printf("Conver = '%v'\n", convertError(insertErr))
+				if errors.Is(err, os.ErrExist){
+					//TODO: what should we do with errors from convertError func?
+					valErr := convertError(insertErr)
+					fmt.Printf("Error from 'erros.go': = '%v'\n", valErr)
+				}
 			}
 		}
 	})
@@ -258,8 +269,9 @@ func TestFindRecord(t *testing.T) {
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, 555, albumName, albumYear, cover).Scan(&albumID)
-
-		fmt.Printf("Conver = '%v'\n", convertError(err))
+		if errors.Is(err, os.ErrExist){
+			fmt.Printf("Conver = '%v'\n", convertError(err))
+		}
 	})
 }
 
@@ -268,4 +280,26 @@ func ErrorHandler(err error) {
 		fmt.Println(">>>>>>> pq error-Code:", err.Code)
 		fmt.Println(">>>>>>> pq error.Code.Name():", err.Code.Name())
 	}
+}
+
+func Test_AddAuthor(t *testing.T){
+	t.Run("add one record", func(t *testing.T) {
+		db := workWithTables(t)
+
+		gotID, gotErr := db.AddAuthor("Entombed")
+		require.Nil(t, gotErr)
+		require.NotNil(t, gotID)
+	})
+
+	t.Run("add 2 records", func(t *testing.T){
+		db := workWithTables(t)
+
+		metalBands := []string{"Sepultura", "Suicide Silence"}
+
+		for _, v := range metalBands {
+			id, err := db.AddAuthor(v)
+			require.Nil(t, err)
+			require.NotNil(t, id)
+		}
+	})
 }

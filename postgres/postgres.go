@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/lithium555/SortMP3/models"
 	log "github.com/sirupsen/logrus"
@@ -206,11 +207,9 @@ func (db *Database) GetExistsAuthor(author string) (int, error) {
 
 	row := db.PostgresConn.QueryRow(`SELECT id FROM author WHERE author_name = $1;`, author)
 	if err := row.Scan(&existAuthor.AuthorID); err == sql.ErrNoRows {
-		log.Errorf("Func GetExistsAuthor(). Zero rows found")
-		return 0, err
+		return 0, errors.Wrap(err, "Func GetExistsAuthor(). Zero rows found")
 	} else if err != nil {
-		log.Errorf("Func GetExistsAuthor(). Error in row.Scan(). Error: '%v'\n", err)
-		return 0, err
+		return 0, errors.Wrap(err, "Func GetExistsAuthor(). Error in row.Scan()")
 	}
 
 	return existAuthor.AuthorID, nil
