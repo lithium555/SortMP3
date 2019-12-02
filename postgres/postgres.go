@@ -3,9 +3,9 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
-	"github.com/pkg/errors"
 
 	"github.com/lithium555/SortMP3/models"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
