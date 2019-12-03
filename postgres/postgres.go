@@ -81,21 +81,6 @@ func (db *Database) CreateTable(query string) error {
 	return nil
 }
 
-// InsertIntoTableGENRETest represents inserting value into table GENRE
-func (db *Database) InsertIntoTableGENRETest() error {
-	id := 0
-	err := db.GetConnection().QueryRow(`
-		INSERT INTO GENRE(name) 
-						VALUES ('$1') 
-						RETURNING id
-	`).Scan(&id)
-	if err != nil {
-		return err
-	}
-	fmt.Println("New record ID is:", id)
-	return nil
-}
-
 // AddGenre represents the record insertion into table `GENRE`.
 func (db *Database) AddGenre(genreName string) (int, error) {
 	// Maybe this genre exists in our table `GENRE`, lets try to find it.
@@ -116,6 +101,26 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 	}
 
 	return genreID, nil
+}
+
+func (db *Database) FindGenres() ([]models.Genre, error) {
+	genres := make([]models.Genre, 0)
+
+	result, qErr := db.PostgresConn.Query(`SELECT * from genre`)
+	if qErr != nil {
+		return nil, qErr
+	}
+
+	for result.Next() {
+		var genre models.Genre
+		if err := result.Scan(&genre.GenreID, &genre.GenreName); err != nil {
+			return nil, errors.Wrap(err, "Where err - FindGenres()")
+		}
+
+		genres = append(genres, genre)
+	}
+
+	return genres, nil
 }
 
 // AddAuthor represents the record insertion into table `AUTHOR`.
@@ -207,12 +212,33 @@ func (db *Database) GetExistsAuthor(author string) (int, error) {
 
 	row := db.PostgresConn.QueryRow(`SELECT id FROM author WHERE author_name = $1;`, author)
 	if err := row.Scan(&existAuthor.AuthorID); err == sql.ErrNoRows {
-		return 0, errors.Wrap(err, "Func GetExistsAuthor(). Zero rows found")
+		return 0, err
 	} else if err != nil {
 		return 0, errors.Wrap(err, "Func GetExistsAuthor(). Error in row.Scan()")
 	}
 
 	return existAuthor.AuthorID, nil
+}
+
+func (db *Database) FindAuthors() ([]models.Author, error) {
+
+	all := make([]models.Author, 0)
+
+	result, qErr := db.PostgresConn.Query(`SELECT * from author`)
+	if qErr != nil {
+		return nil, qErr
+	}
+
+	for result.Next() {
+		var author models.Author
+		if err := result.Scan(&author.AuthorID, &author.AuthorName); err != nil {
+			return nil, errors.Wrap(err, "Where error - FindAuthors()")
+		}
+
+		all = append(all, author)
+	}
+
+	return all, nil
 }
 
 // GetExistsGenre will find genrteID if this genre exits in table `GENRE`
@@ -221,7 +247,6 @@ func (db *Database) GetExistsGenre(genreName string) (int, error) {
 
 	var genreExist models.Genre
 	if err := row.Scan(&genreExist.GenreID); err == sql.ErrNoRows {
-		log.Errorf("Func GetExistsGenre(): Zero rows found.")
 		return 0, err
 	} else if err != nil {
 		log.Errorf("Func  GetExistsGenre(). Error in row.Scan(). Error: '%v'\n", err)
@@ -240,10 +265,8 @@ func (db *Database) GetExistsAlbum(authorID int, albumName string, albumYear int
 	var albumExist models.Album
 
 	if err := row.Scan(&albumExist.AlbumID); err == sql.ErrNoRows {
-		log.Errorf("Func GetExistsAlbum(). Zero rows found.")
 		return 0, err
 	} else if err != nil {
-		log.Errorf("Func  GetExistsAlbum(). Error in row.Scan(). Error: '%v'\n", err)
 		return 0, err
 	}
 

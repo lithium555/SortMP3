@@ -2,17 +2,20 @@ package postgres
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log"
-	"os"
 	"testing"
 
-	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 	"github.com/ory/dockertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	albumYear = 1995
+	albumName = "The Gallery"
+	cover     = ""
 )
 
 func CreatePostgresForTesting(t testing.TB) (*sql.DB, func()) {
@@ -68,20 +71,34 @@ func TestGetConnection(t *testing.T) {
 }
 
 func TestDatabase_AddAlbum(t *testing.T) {
-	t.Skip()
-	conn, kill := CreatePostgresForTesting(t)
-	kill()
+	t.Run("trying to use CreatePostgresForTesting(t)", func(t *testing.T) {
+		t.Skip()
+		conn, kill := CreatePostgresForTesting(t)
+		kill()
 
-	testDB := Database{
-		PostgresConn: conn,
-	}
+		testDB := Database{
+			PostgresConn: conn,
+		}
 
-	errCreate := testDB.CreateTable(CreateTableALBUM)
-	fmt.Printf("errCreate = '%v'\n", errCreate)
-	fmt.Printf("errCreate.Error() ='%v'\n", errCreate.Error())
+		errCreate := testDB.CreateTable(CreateTableALBUM)
+		fmt.Printf("errCreate = '%v'\n", errCreate)
+		fmt.Printf("errCreate.Error() ='%v'\n", errCreate.Error())
 
-	require.Nil(t, errCreate)
-	//gotID, gotErr := testDB.AddAlbum()
+		require.Nil(t, errCreate)
+		//gotID, gotErr := testDB.AddAlbum()
+	})
+
+	t.Run("table album does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		gotRes, gotErr := db.AddAlbum(2, albumName, albumYear, cover)
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+		require.Equal(t, 0, gotRes)
+	})
 
 }
 
@@ -148,13 +165,8 @@ func workWithTables(t *testing.T) Database {
 
 //сделай себе несколько тестов которые:
 //- пытаются найти запись которой нет
-func TestFindRecord(t *testing.T) {
 
-	var (
-		albumYear = 1995
-		albumName = "The Gallery"
-		cover     = ""
-	)
+func TestDatabase_GetExistsAuthor(t *testing.T) {
 	t.Run("find record which doesnt exist in database", func(t *testing.T) {
 		db := workWithTables(t)
 		defer db.Close()
@@ -167,38 +179,41 @@ func TestFindRecord(t *testing.T) {
 			`, author).Scan(&authorID)
 		require.Nil(t, err)
 
-		//expectError := "sql: no rows in result set"
-
 		gotVal, gotErr := db.GetExistsAuthor("Iwrestledabearonce")
 		require.Zero(t, gotVal)
-		//require.Equal(t, expectError, gotErr.Error())
-		if errors.Is(err, os.ErrExist) {
-			//TODO: what should we do with errors from convertError func?
-			valErr := convertError(gotErr)
-			fmt.Printf("Error from 'erros.go': = '%v'\n", valErr)
-		}
-		//TODO: what should we do with errors IS NOT FROM convertError() func?
+		require.Equal(t, sql.ErrNoRows, gotErr) // no record in db
+	})
+	t.Run("table author doesnt exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		gotVal, gotErr := db.GetExistsAuthor("Iwrestledabearonce")
+		require.Equal(t, 0, gotVal)
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
 	})
 
-	//- пытаются внести дубликат по первичному ключу
-	t.Run("insert duplicate by foreign key", func(t *testing.T) {
+	t.Run("success, author exists", func(t *testing.T) {
 		db := workWithTables(t)
 		defer db.Close()
 
-		authorID, err := db.AddAuthor("Dark Tranquillity")
-		assert.Nil(t, err)
+		author := "Dark Tranquillity"
+		var authorID int
+		err := db.PostgresConn.QueryRow(`
+						INSERT INTO author (author_name)
+						VALUES ($1) RETURNING id
+			`, author).Scan(&authorID)
+		require.Nil(t, err)
 
-		for i := 0; i < 2; i++ {
-			var albumID int
-			err = db.PostgresConn.QueryRow(`
-			INSERT INTO ALBUM(author_id, album_name, album_year, cover)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id
-		`, authorID, albumName, albumYear, cover).Scan(&albumID)
-			require.Nil(t, err)
-		}
+		gotVal, gotErr := db.GetExistsAuthor(author)
+		require.Equal(t, 1, gotVal)
+		require.Nil(t, gotErr)
 	})
+}
 
+func TestFindRecord(t *testing.T) {
 	// TODO: 1.2) Обработчики ошибок. Разобраться как отличить типы ошибок: "нет записи",
 	//  "конфликт по уникальному полю", "неверный FK".
 
@@ -210,8 +225,9 @@ func TestFindRecord(t *testing.T) {
 			SELECT id FROM author WHERE author_name = $1;
 		`, 555).Scan(&albumID)
 
-		expectError := "sql: no rows in result set"
-		require.Equal(t, expectError, err.Error())
+		expectedID := 0
+		require.Equal(t, expectedID, albumID)
+		require.Equal(t, sql.ErrNoRows, err)
 	})
 
 	t.Run("conflict by unique field", func(t *testing.T) {
@@ -221,16 +237,14 @@ func TestFindRecord(t *testing.T) {
 		dropErr := db.Drop("person")
 		require.Nil(t, dropErr)
 
-		_, err = db.PostgresConn.Exec(`
+		_, insertErr := db.PostgresConn.Exec(`
 			CREATE TABLE person (
 			   id serial PRIMARY KEY,
 			   first_name VARCHAR (50),
 			   last_name VARCHAR (50),
 			   email VARCHAR (50) UNIQUE
 			);`)
-		assert.Nil(t, err)
-
-		//expectedErr := "pq: duplicate key value violates unique constraint"
+		assert.Nil(t, insertErr)
 
 		var personID int
 		for i := 0; i < 3; i++ {
@@ -240,14 +254,8 @@ func TestFindRecord(t *testing.T) {
 				RETURNING id`, "Slava", "Pinchuk", "development1810@gmail.com").Scan(&personID)
 
 			if i > 0 {
-				//fmt.Printf("insertErr.Error() = '%v'\n", insertErr.Error())
-				//require.Contains(t, insertErr.Error(), expectedErr)
-				//fmt.Printf("Conver = '%v'\n", convertError(insertErr))
-				if errors.Is(err, os.ErrExist) {
-					//TODO: what should we do with errors from convertError func?
-					valErr := convertError(insertErr)
-					fmt.Printf("Error from 'erros.go': = '%v'\n", valErr)
-				}
+				gotErr := convertError(insertErr)
+				require.Equal(t, DuplicateValueErr, gotErr)
 			}
 		}
 	})
@@ -269,26 +277,46 @@ func TestFindRecord(t *testing.T) {
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, 555, albumName, albumYear, cover).Scan(&albumID)
-		if errors.Is(err, os.ErrExist) {
-			fmt.Printf("Conver = '%v'\n", convertError(err))
-		}
+
+		gotErr := convertError(err)
+		require.Equal(t, WrongForeignKeyErr, gotErr)
 	})
 }
 
-func ErrorHandler(err error) {
-	if err, ok := err.(*pq.Error); ok {
-		fmt.Println(">>>>>>> pq error-Code:", err.Code)
-		fmt.Println(">>>>>>> pq error.Code.Name():", err.Code.Name())
-	}
-}
-
 func Test_AddAuthor(t *testing.T) {
+	//- пытаются внести дубликат по первичному ключу
+	t.Run("insert duplicate by foreign key", func(t *testing.T) {
+		db := workWithTables(t)
+		defer db.Close()
+
+		authorID, err := db.AddAuthor("Dark Tranquillity")
+		assert.Nil(t, err)
+
+		for i := 0; i < 2; i++ {
+			var albumID int
+			err = db.PostgresConn.QueryRow(`
+			INSERT INTO ALBUM(author_id, album_name, album_year, cover)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id
+		`, authorID, albumName, albumYear, cover).Scan(&albumID)
+			require.Nil(t, err)
+		}
+	})
+
 	t.Run("add one record", func(t *testing.T) {
 		db := workWithTables(t)
 
 		gotID, gotErr := db.AddAuthor("Entombed")
 		require.Nil(t, gotErr)
 		require.NotNil(t, gotID)
+
+		expectLen := 1
+		expectAuthor := "Entombed"
+
+		res, err := db.FindAuthors()
+		require.Nil(t, err)
+		require.Equal(t, expectLen, len(res))
+		require.Equal(t, expectAuthor, res[0].AuthorName)
 	})
 
 	t.Run("add 2 records", func(t *testing.T) {
@@ -301,5 +329,120 @@ func Test_AddAuthor(t *testing.T) {
 			require.Nil(t, err)
 			require.NotNil(t, id)
 		}
+		expectLen := 2
+
+		authors, err := db.FindAuthors()
+		require.Nil(t, err)
+		require.Equal(t, metalBands[0], authors[0].AuthorName)
+		require.Equal(t, metalBands[1], authors[1].AuthorName)
+		require.Equal(t, expectLen, len(authors))
+	})
+
+	t.Run("table author does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		gotRes, gotErr := db.FindAuthors()
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+		require.Equal(t, 0, len(gotRes))
+	})
+}
+
+func Test_AddGenre(t *testing.T) {
+	t.Run("successful test", func(t *testing.T) {
+		db := workWithTables(t)
+		testGenres := []string{"Jazz", "Blues", "Metal", "PostRock"}
+
+		for _, genre := range testGenres {
+			gotID, gotErr := db.AddGenre(genre)
+			require.Nil(t, gotErr)
+			require.NotNil(t, gotID)
+		}
+
+		genres, err := db.FindGenres()
+		require.Nil(t, err)
+		expectLength := 4
+
+		for k, genre := range genres {
+			require.Equal(t, testGenres[k], genre.GenreName)
+		}
+		require.Equal(t, expectLength, len(genres))
+	})
+
+	// TODO: set up field woith name of genre as unique
+	t.Run("duplicate name of genre", func(t *testing.T) {
+		t.Skip()
+		db := workWithTables(t)
+		testGenres := []string{"Jazz", "Jazz"}
+
+		for _, genre := range testGenres {
+			gotID, gotErr := db.AddGenre(genre)
+			//require.NotNil(t, gotErr)
+			require.Nil(t, gotErr)
+			require.NotNil(t, gotID)
+		}
+	})
+
+	// TODO: what to do with empty values - maybe write parser before insert?
+	t.Run("empty genre string", func(t *testing.T) {
+		db := workWithTables(t)
+		gotID, gotErr := db.AddGenre("")
+		//require.NotNil(t, gotErr)
+		require.Nil(t, gotErr)
+		require.NotNil(t, gotID)
+
+		genres, err := db.FindGenres()
+		require.Nil(t, err)
+		require.Equal(t, 1, len(genres))
+		//require.Equal(t, 0, len(genres))
+	})
+
+	t.Run("add one genreName 2 times, expect one record in database", func(t *testing.T) {
+		db := workWithTables(t)
+		genreName := "Classic"
+
+		var genreID int
+		err := db.GetConnection().QueryRow(`
+		INSERT INTO GENRE(genre_name) 
+			VALUES ($1) 	
+			RETURNING id
+		`, genreName).Scan(&genreID)
+		assert.Nil(t, err)
+
+		gotID, gotErr := db.AddGenre(genreName)
+		require.NotNil(t, gotID)
+		require.Equal(t, genreID, gotID) // return existID
+		require.Nil(t, gotErr)
+
+		expectLen := 1
+		genres, findErr := db.FindGenres()
+		require.Nil(t, findErr)
+		require.Equal(t, expectLen, len(genres))
+		require.Equal(t, genreName, genres[0].GenreName)
+	})
+}
+
+func Test_FindGenres(t *testing.T) {
+	t.Run("empty table", func(t *testing.T) {
+		db := workWithTables(t)
+
+		gotRes, gotErr := db.FindGenres()
+		require.Nil(t, gotErr)
+		require.Equal(t, 0, len(gotRes))
+	})
+
+	t.Run("table genre does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		gotRes, gotErr := db.FindGenres()
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+		require.Equal(t, 0, len(gotRes))
 	})
 }
