@@ -15,7 +15,7 @@ const (
 	CreateTableALBUM = `CREATE TABLE IF NOT EXISTS album (
 												id SERIAL PRIMARY KEY,
 												author_id INT, 
-												album_name TEXT,
+												album_name TEXT UNIQUE,
 												album_year INT,
 												cover TEXT, 
 												FOREIGN KEY (author_id) REFERENCES author(id)
@@ -23,7 +23,7 @@ const (
 	// CreateTableSONG represents query for creating table SONG.  +
 	CreateTableSONG = `CREATE TABLE IF NOT EXISTS song(  
 												id SERIAL PRIMARY KEY,
-												name_of_song TEXT,
+												name_of_song TEXT UNIQUE,
 												album_id INT,
 												genre_id INT,
 												author_id INT,

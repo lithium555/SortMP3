@@ -12,7 +12,7 @@ var (
 	detailParse = regexp.MustCompile(`(?m)\((\w+(, \w+)*)\)`)
 
 	DuplicateValueErr   = errors.New("Trying to write Duplicate Value to the DB")
-	WrongForeignKeyErr  = errors.New("Trying to create record with wrong Foreign Key. We have it in data base.")
+	WrongForeignKeyErr  = errors.New("Trying to create record with wrong Foreign Key.")
 	TableDoesntExistErr = errors.New("Undefined table. Table doesnt exist in database.")
 )
 
@@ -53,7 +53,7 @@ func convertError(err error) error {
 	return err
 }
 
-func parseErrorCode(err error) string {
+func parseErrorCode(err error) string { // nolint function for detection type of error
 	if err == nil {
 		return ""
 	}

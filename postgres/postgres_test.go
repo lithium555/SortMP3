@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	_ "github.com/lib/pq"
+	"github.com/lithium555/SortMP3/models"
 	"github.com/ory/dockertest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,6 +101,26 @@ func TestDatabase_AddAlbum(t *testing.T) {
 		require.Equal(t, 0, gotRes)
 	})
 
+	t.Run("add duplicate album", func(t *testing.T) {
+		db := workWithTables(t)
+		defer db.Close()
+
+		authorID, err := db.AddAuthor("Soufly")
+		assert.Nil(t, err)
+
+		albumID, err := db.AddAlbum(authorID, albumName, albumYear, cover)
+		assert.Equal(t, 1, albumID)
+		assert.Nil(t, err)
+
+		gotID, gotErr := db.AddAlbum(authorID, albumName, albumYear, cover)
+		require.Equal(t, 1, gotID) // should return id of elements which exists
+		require.Nil(t, gotErr)
+
+		expectLen := 1
+		res, err := db.SelectALBUM()
+		require.Equal(t, expectLen, len(res))
+		require.Nil(t, err)
+	})
 }
 
 // https://postgresql.leopard.in.ua/
@@ -299,7 +320,11 @@ func Test_AddAuthor(t *testing.T) {
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, authorID, albumName, albumYear, cover).Scan(&albumID)
-			require.Nil(t, err)
+			if i == 0 {
+				require.Nil(t, err)
+			} else {
+				require.Equal(t, DuplicateValueErr, convertError(err))
+			}
 		}
 	})
 
@@ -349,6 +374,25 @@ func Test_AddAuthor(t *testing.T) {
 		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
 		require.Equal(t, 0, len(gotRes))
 	})
+
+	t.Run("add duplicate author", func(t *testing.T) {
+		db := workWithTables(t)
+
+		authors := []string{"Entombed", "Entombed"}
+		expectLength := 1
+
+		id, err := db.AddAuthor(authors[0])
+		assert.NotNil(t, id)
+		assert.Nil(t, err)
+
+		gotID, gotErr := db.AddAuthor(authors[1])
+		assert.Nil(t, gotErr)
+		assert.Equal(t, 1, gotID) // function should return id if element exist
+
+		gotVal, gotErr := db.SelectAUTHOR()
+		require.Nil(t, gotErr)
+		require.Equal(t, expectLength, len(gotVal))
+	})
 }
 
 func Test_AddGenre(t *testing.T) {
@@ -372,18 +416,23 @@ func Test_AddGenre(t *testing.T) {
 		require.Equal(t, expectLength, len(genres))
 	})
 
-	// TODO: set up field woith name of genre as unique
 	t.Run("duplicate name of genre", func(t *testing.T) {
-		t.Skip()
 		db := workWithTables(t)
 		testGenres := []string{"Jazz", "Jazz"}
 
-		for _, genre := range testGenres {
+		for k, genre := range testGenres {
 			gotID, gotErr := db.AddGenre(genre)
-			//require.NotNil(t, gotErr)
 			require.Nil(t, gotErr)
 			require.NotNil(t, gotID)
+
+			if k == 1 {
+				require.Equal(t, 1, gotID) // if elemet exist, func should return exists ID
+			}
 		}
+
+		res, err := db.SelectGENRE()
+		require.Nil(t, err)
+		require.Equal(t, 1, len(res))
 	})
 
 	// TODO: what to do with empty values - maybe write parser before insert?
@@ -444,5 +493,256 @@ func Test_FindGenres(t *testing.T) {
 		gotRes, gotErr := db.FindGenres()
 		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
 		require.Equal(t, 0, len(gotRes))
+	})
+}
+
+func TestDatabase_InsertSONG(t *testing.T) {
+	t.Run("table SONG does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		gotErr := db.InsertSONG("Punish my Heaven", 55, 23, 5, 1)
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+	})
+	t.Run("wrong foreign key", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		gotErr := db.InsertSONG("Punish my Heaven", 55, 23, 5, 1)
+		require.Equal(t, WrongForeignKeyErr, convertError(gotErr))
+	})
+	t.Run("successful insert one song", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID, err := db.AddAuthor("Dark Tranquillity")
+		assert.Nil(t, err)
+
+		genreID, err := db.AddGenre("melodic-death metal")
+		assert.Nil(t, err)
+
+		numberOfTrack := 23
+
+		albumID, err := db.AddAlbum(authorID, "The Gallery", 1995, "")
+		assert.Nil(t, err)
+
+		gotErr := db.InsertSONG("Punish my Heaven", albumID, genreID, authorID, numberOfTrack)
+		require.Nil(t, gotErr)
+	})
+	t.Run("try to insert the same song twice", func(t *testing.T) {
+		db := workWithTables(t)
+
+		authorID, err := db.AddAuthor("Dark Tranquillity")
+		assert.Nil(t, err)
+
+		genreID, err := db.AddGenre("melodic-death metal")
+		assert.Nil(t, err)
+
+		numberOfTrack := 23
+
+		albumID, err := db.AddAlbum(authorID, "The Gallery", 1995, "")
+		assert.Nil(t, err)
+
+		gotErr := db.InsertSONG("Punish my Heaven", albumID, genreID, authorID, numberOfTrack)
+		require.Nil(t, gotErr)
+
+		gotErr = db.InsertSONG("Punish my Heaven", albumID, genreID, authorID, numberOfTrack)
+		require.Equal(t, DuplicateValueErr, convertError(gotErr))
+
+		expectSong := &models.Song{
+			SongID:      1,
+			NameOfSong:  "Punish my Heaven",
+			AlbumID:     1,
+			GenreID:     1,
+			AuthorID:    1,
+			TrackNumber: 23,
+		}
+		expectLen := 1 // test is fine, we expect one element, when we have duplicate
+
+		gotVal, gotErr := db.SelectSONG()
+		require.Equal(t, expectLen, len(gotVal))
+		require.Equal(t, expectSong, gotVal[0])
+		require.Nil(t, gotErr)
+	})
+	t.Run("insert 3 songs", func(t *testing.T) {
+
+	})
+}
+
+func Test_SelectSONG(t *testing.T) {
+	t.Run("table song does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		gotVal, gotErr := db.SelectSONG()
+		require.Equal(t, 0, len(gotVal))
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+	})
+	t.Run("success select", func(t *testing.T) {
+		db := workWithTables(t)
+
+		authorID, err := db.AddAuthor("Dark Tranquillity")
+		assert.Nil(t, err)
+
+		genreID, err := db.AddGenre("melodic-death metal")
+		assert.Nil(t, err)
+
+		numberOfTrack := 5
+
+		albumID, err := db.AddAlbum(authorID, "The Gallery", 1995, "")
+		assert.Nil(t, err)
+
+		gotErr := db.InsertSONG("The Gallery", albumID, genreID, authorID, numberOfTrack)
+		assert.Nil(t, gotErr)
+
+		expectSong := &models.Song{
+			SongID:      1,
+			NameOfSong:  "The Gallery",
+			AlbumID:     1,
+			GenreID:     1,
+			AuthorID:    1,
+			TrackNumber: 5,
+		}
+		expectLen := 1
+
+		gotVal, gotErr := db.SelectSONG()
+		require.Nil(t, gotErr)
+		require.Equal(t, expectLen, len(gotVal))
+		require.Equal(t, expectSong, gotVal[0])
+	})
+}
+
+func Test_SelectGENRE(t *testing.T) {
+	t.Run("table genre does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		expectLength := 0
+
+		gotVal, gotErr := db.SelectGENRE()
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+		require.Equal(t, expectLength, len(gotVal))
+	})
+	t.Run("empty table genre", func(t *testing.T) {
+		db := workWithTables(t)
+
+		expectLength := 0
+
+		gotVal, gotErr := db.SelectGENRE()
+		require.Nil(t, gotErr)
+		require.Equal(t, expectLength, len(gotVal))
+	})
+	t.Run("successful select genre", func(t *testing.T) {
+		db := workWithTables(t)
+
+		expectLength := 4
+
+		genres := []string{"classic", "blues", "jazz", "post-rock"}
+
+		for _, genre := range genres {
+			id, err := db.AddGenre(genre)
+			assert.Nil(t, err)
+			assert.NotNil(t, id)
+		}
+
+		gotVal, gotErr := db.SelectGENRE()
+		require.Nil(t, gotErr)
+		require.Equal(t, expectLength, len(gotVal))
+	})
+}
+
+func Test_SelectAUTHOR(t *testing.T) {
+	t.Run("table author does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		expectLength := 0
+
+		gotVal, gotErr := db.SelectAUTHOR()
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+		require.Equal(t, expectLength, len(gotVal))
+	})
+	t.Run("success select author", func(t *testing.T) {
+		db := workWithTables(t)
+
+		expectLength := 4
+		authors := []string{"Entombed", "Definition Sane", "Bob Dilan", "Trombone shorty"}
+
+		for _, author := range authors {
+			authorID, err := db.AddAuthor(author)
+			assert.NotNil(t, authorID)
+			assert.Nil(t, err)
+		}
+
+		gotVal, gotErr := db.SelectAUTHOR()
+		require.Nil(t, gotErr)
+		require.Equal(t, expectLength, len(gotVal))
+	})
+}
+
+func Test_SelectALBUM(t *testing.T) {
+	t.Run("table album does not exist", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		expectLength := 0
+
+		gotVal, gotErr := db.SelectALBUM()
+		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
+		require.Equal(t, expectLength, len(gotVal))
+	})
+	t.Run("empty table", func(t *testing.T) {
+		db := workWithTables(t)
+
+		expectLen := 0
+
+		gotVal, gotErr := db.SelectALBUM()
+		require.Equal(t, expectLen, len(gotVal))
+		require.Nil(t, gotErr)
+	})
+	t.Run("successful select album", func(t *testing.T) {
+		db := workWithTables(t)
+
+		authorID, err := db.AddAuthor("Soufly")
+		assert.Nil(t, err)
+
+		albumID, err := db.AddAlbum(authorID, albumName, albumYear, cover)
+		assert.Equal(t, 1, albumID)
+		assert.Nil(t, err)
+
+		authorID2, err2 := db.AddAuthor("Behemoth")
+		assert.Nil(t, err2)
+
+		albumID2, err2 := db.AddAlbum(authorID2, albumName, albumYear, cover)
+		fmt.Printf("albumID2 = '%v'\n", albumID2)
+		assert.Equal(t, 2, albumID2)
+		assert.Nil(t, err)
+
+		expectLen := 2
+
+		gotVal, gotErr := db.SelectALBUM()
+		require.Nil(t, gotErr)
+		require.Equal(t, expectLen, len(gotVal))
 	})
 }

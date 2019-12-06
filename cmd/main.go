@@ -18,6 +18,8 @@ func main() {
 	}
 }
 
+// TODO: Insert 1000 songs per one insert, but not insert one by one. You can open a transaction and do all inserts/selects on it - would be much faster.
+
 func run() error {
 	postgres, err := postgres.GetPostgresConnection()
 	if err != nil {

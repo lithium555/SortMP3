@@ -187,7 +187,6 @@ func (db *Database) InsertSONG(songName string, albumID int, genreID int, author
 	VALUES ($1, $2, $3, $4, $5)
 	`, songName, albumID, genreID, authorID, trackNum)
 	if err != nil {
-		log.Printf("InsertSONG(), Error: '%v'\n", err)
 		return err
 	}
 	return nil
@@ -279,7 +278,6 @@ func (db *Database) SelectSONG() ([]*models.Song, error) {
 			SELECT id, name_of_song, album_id, genre_id, author_id, track_number 
 			FROM SONG`)
 	if err != nil {
-		log.Printf("Select() for table `SONG` not passed. Error: '%v'\n", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -289,7 +287,6 @@ func (db *Database) SelectSONG() ([]*models.Song, error) {
 		song := new(models.Song)
 		err := rows.Scan(&song.SongID, &song.NameOfSong, &song.AlbumID, &song.GenreID, &song.AuthorID, &song.TrackNumber)
 		if err != nil {
-			log.Errorf("Func SelectSONG(). Error in rows.Scan(). Error: '%v'\n", err)
 			return nil, err
 		}
 		songs = append(songs, song)
@@ -317,7 +314,6 @@ func (db *Database) SelectGENRE() ([]*models.Genre, error) {
 		SELECT id, genre_name 
 		FROM GENRE`)
 	if err != nil {
-		log.Printf("Select() for table `GENRE` not passed. Error: '%v'\n", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -350,7 +346,6 @@ func (db *Database) SelectAUTHOR() ([]*models.Author, error) {
 			SELECT id, author_name 
 			FROM AUTHOR`)
 	if err != nil {
-		log.Printf("Select() for table `AUTHOR` not passed. Error: '%v'\n", err)
 		return nil, err
 	}
 	defer rows.Close()
@@ -384,7 +379,6 @@ func (db *Database) SelectALBUM() ([]*models.Album, error) {
 			SELECT id, author_id, album_name, album_year, cover  
 			FROM ALBUM`)
 	if err != nil {
-		log.Printf("Select() for table `ALBUM` not passed. Error: '%v'\n", err)
 		return nil, err
 	}
 	defer rows.Close()
