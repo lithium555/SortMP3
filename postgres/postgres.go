@@ -104,7 +104,7 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 }
 
 func (db *Database) FindGenres() ([]models.Genre, error) {
-	genres := make([]models.Genre, 0)
+	var genres []models.Genre
 
 	result, qErr := db.PostgresConn.Query(`SELECT * from genre`)
 	if qErr != nil {
@@ -386,9 +386,14 @@ func (db *Database) SelectALBUM() ([]*models.Album, error) {
 	albums := make([]*models.Album, 0)
 	for rows.Next() {
 		album := new(models.Album)
-		if err := rows.Scan(&album.AlbumID, &album.AuthorID, &album.AlbumName, &album.AlbumYear, &album.Cover); err != nil {
+		var coverScan sql.NullString
+		if err := rows.Scan(&album.AlbumID, &album.AuthorID, &album.AlbumName, &album.AlbumYear, &coverScan); err != nil {
 			log.Errorf("Func SelectAlbum(). Error in rows.Scan(). Error: '%v'\n", err)
 			return nil, err
+		}
+
+		if coverScan.Valid {
+			album.Cover = &coverScan.String
 		}
 		albums = append(albums, album)
 	}

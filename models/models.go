@@ -1,7 +1,5 @@
 package models
 
-import "database/sql"
-
 // Genre represents genre fields in table `GENRE`
 type Genre struct {
 	GenreID   int
@@ -20,18 +18,8 @@ type Album struct {
 	AuthorID  int
 	AlbumName string
 	AlbumYear int
-	Cover     sql.NullString // https://github.com/golang/go/wiki/SQLInterface
+	Cover     *string
 }
-
-/*
-	Why  field Cover has type  'sql.NullString' ?
-
-	var an_int64 sql.NullInt64
-	var a_string sql.NullString
-	var another_string sql.NullString
-	row := db.QueryRow("SELECT id, name, thumbUrl FROM x WHERE y=? LIMIT 1", model.ID)
-	err := row.Scan(&an_int64, &a_string, &another_string))
-*/
 
 // Song represents song fields in table `SONG`
 type Song struct {

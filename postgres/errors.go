@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"database/sql"
 	"fmt"
 	"regexp"
 
@@ -14,6 +15,7 @@ var (
 	DuplicateValueErr   = errors.New("Trying to write Duplicate Value to the DB")
 	WrongForeignKeyErr  = errors.New("Trying to create record with wrong Foreign Key.")
 	TableDoesntExistErr = errors.New("Undefined table. Table doesnt exist in database.")
+	NotFoundErr         = errors.New("Not found.")
 )
 
 const (
@@ -50,6 +52,10 @@ func convertError(err error) error {
 			return TableDoesntExistErr
 		}
 	}
+
+	if err == sql.ErrNoRows {
+		return NotFoundErr
+	}
 	return err
 }
 
@@ -63,7 +69,7 @@ func parseErrorCode(err error) string { // nolint function for detection type of
 		return string(err.Code)
 	}
 
-	return "Not a pq.Error type"
+	return ""
 }
 
 // TODO: delete this old functions aftel all will be fine with new one
@@ -100,10 +106,3 @@ func parseErrorCode(err error) string { // nolint function for detection type of
 //	}
 //	return err
 //}
-
-func ErrorHandler(err error) {
-	if err, ok := err.(*pq.Error); ok {
-		fmt.Println(">>>>>>> pq error-Code:", err.Code)
-		fmt.Println(">>>>>>> pq error.Code.Name():", err.Code.Name())
-	}
-}

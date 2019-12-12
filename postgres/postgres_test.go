@@ -102,7 +102,7 @@ func TestDatabase_AddAlbum(t *testing.T) {
 	})
 
 	t.Run("add duplicate album", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		defer db.Close()
 
 		authorID, err := db.AddAuthor("Soufly")
@@ -171,7 +171,8 @@ func DropTablesAfterTest(getPostgres Database) error {
 	return nil
 }
 
-func workWithTables(t *testing.T) Database {
+// ensureTables - ensures that tables exist and has the same structure as the test expects.
+func ensureTables(t *testing.T) Database {
 	db, err := GetPostgresConnection()
 	assert.Nil(t, err)
 
@@ -189,7 +190,7 @@ func workWithTables(t *testing.T) Database {
 
 func TestDatabase_GetExistsAuthor(t *testing.T) {
 	t.Run("find record which doesnt exist in database", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		defer db.Close()
 
 		author := "System of a down" //"Dark Tranquillity"
@@ -201,8 +202,10 @@ func TestDatabase_GetExistsAuthor(t *testing.T) {
 		require.Nil(t, err)
 
 		gotVal, gotErr := db.GetExistsAuthor("Iwrestledabearonce")
+		resErr := convertError(gotErr)
 		require.Zero(t, gotVal)
-		require.Equal(t, sql.ErrNoRows, gotErr) // no record in db
+		require.Equal(t, NotFoundErr, resErr) // no record in db
+
 	})
 	t.Run("table author doesnt exist", func(t *testing.T) {
 		db, err := GetPostgresConnection()
@@ -217,7 +220,7 @@ func TestDatabase_GetExistsAuthor(t *testing.T) {
 	})
 
 	t.Run("success, author exists", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		defer db.Close()
 
 		author := "Dark Tranquillity"
@@ -239,7 +242,7 @@ func TestFindRecord(t *testing.T) {
 	//  "конфликт по уникальному полю", "неверный FK".
 
 	t.Run("no such record in table", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		var albumID int
 		err := db.PostgresConn.QueryRow(`
@@ -283,7 +286,7 @@ func TestFindRecord(t *testing.T) {
 
 	//- пытаются создать запись в неверным FK
 	t.Run("create record with wrong Foreign Key", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		metalBands := []string{"Sepultura", "Suicide Silence"}
 
@@ -307,7 +310,7 @@ func TestFindRecord(t *testing.T) {
 func Test_AddAuthor(t *testing.T) {
 	//- пытаются внести дубликат по первичному ключу
 	t.Run("insert duplicate by foreign key", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		defer db.Close()
 
 		authorID, err := db.AddAuthor("Dark Tranquillity")
@@ -329,7 +332,7 @@ func Test_AddAuthor(t *testing.T) {
 	})
 
 	t.Run("add one record", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		gotID, gotErr := db.AddAuthor("Entombed")
 		require.Nil(t, gotErr)
@@ -345,7 +348,7 @@ func Test_AddAuthor(t *testing.T) {
 	})
 
 	t.Run("add 2 records", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		metalBands := []string{"Sepultura", "Suicide Silence"}
 
@@ -376,7 +379,7 @@ func Test_AddAuthor(t *testing.T) {
 	})
 
 	t.Run("add duplicate author", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		authors := []string{"Entombed", "Entombed"}
 		expectLength := 1
@@ -397,7 +400,7 @@ func Test_AddAuthor(t *testing.T) {
 
 func Test_AddGenre(t *testing.T) {
 	t.Run("successful test", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		testGenres := []string{"Jazz", "Blues", "Metal", "PostRock"}
 
 		for _, genre := range testGenres {
@@ -417,7 +420,7 @@ func Test_AddGenre(t *testing.T) {
 	})
 
 	t.Run("duplicate name of genre", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		testGenres := []string{"Jazz", "Jazz"}
 
 		for k, genre := range testGenres {
@@ -437,7 +440,7 @@ func Test_AddGenre(t *testing.T) {
 
 	// TODO: what to do with empty values - maybe write parser before insert?
 	t.Run("empty genre string", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		gotID, gotErr := db.AddGenre("")
 		//require.NotNil(t, gotErr)
 		require.Nil(t, gotErr)
@@ -450,7 +453,7 @@ func Test_AddGenre(t *testing.T) {
 	})
 
 	t.Run("add one genreName 2 times, expect one record in database", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 		genreName := "Classic"
 
 		var genreID int
@@ -476,7 +479,7 @@ func Test_AddGenre(t *testing.T) {
 
 func Test_FindGenres(t *testing.T) {
 	t.Run("empty table", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		gotRes, gotErr := db.FindGenres()
 		require.Nil(t, gotErr)
@@ -539,7 +542,7 @@ func TestDatabase_InsertSONG(t *testing.T) {
 		require.Nil(t, gotErr)
 	})
 	t.Run("try to insert the same song twice", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		authorID, err := db.AddAuthor("Dark Tranquillity")
 		assert.Nil(t, err)
@@ -591,7 +594,7 @@ func Test_SelectSONG(t *testing.T) {
 		require.Equal(t, TableDoesntExistErr, convertError(gotErr))
 	})
 	t.Run("success select", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		authorID, err := db.AddAuthor("Dark Tranquillity")
 		assert.Nil(t, err)
@@ -639,7 +642,7 @@ func Test_SelectGENRE(t *testing.T) {
 		require.Equal(t, expectLength, len(gotVal))
 	})
 	t.Run("empty table genre", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		expectLength := 0
 
@@ -648,7 +651,7 @@ func Test_SelectGENRE(t *testing.T) {
 		require.Equal(t, expectLength, len(gotVal))
 	})
 	t.Run("successful select genre", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		expectLength := 4
 
@@ -681,7 +684,7 @@ func Test_SelectAUTHOR(t *testing.T) {
 		require.Equal(t, expectLength, len(gotVal))
 	})
 	t.Run("success select author", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		expectLength := 4
 		authors := []string{"Entombed", "Definition Sane", "Bob Dilan", "Trombone shorty"}
@@ -713,7 +716,7 @@ func Test_SelectALBUM(t *testing.T) {
 		require.Equal(t, expectLength, len(gotVal))
 	})
 	t.Run("empty table", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		expectLen := 0
 
@@ -722,7 +725,7 @@ func Test_SelectALBUM(t *testing.T) {
 		require.Nil(t, gotErr)
 	})
 	t.Run("successful select album", func(t *testing.T) {
-		db := workWithTables(t)
+		db := ensureTables(t)
 
 		authorID, err := db.AddAuthor("Soufly")
 		assert.Nil(t, err)
