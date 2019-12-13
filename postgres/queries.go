@@ -14,7 +14,7 @@ const (
 	// CreateTableALBUM represents query for creating table ALBUM.
 	CreateTableALBUM = `CREATE TABLE IF NOT EXISTS album (
 												id SERIAL PRIMARY KEY,
-												author_id INT, 
+												author_id INT  UNIQUE, 
 												album_name TEXT UNIQUE,
 												album_year INT,
 												cover TEXT, 
@@ -26,7 +26,7 @@ const (
 												name_of_song TEXT UNIQUE,
 												album_id INT,
 												genre_id INT,
-												author_id INT,
+												author_id INT  UNIQUE,
 												track_number INT, 
 												FOREIGN KEY (album_id) REFERENCES album(id),
 												FOREIGN KEY (genre_id) REFERENCES genre(id),

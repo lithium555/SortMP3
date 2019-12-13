@@ -737,10 +737,10 @@ func Test_SelectALBUM(t *testing.T) {
 		authorID2, err2 := db.AddAuthor("Behemoth")
 		assert.Nil(t, err2)
 
-		albumID2, err2 := db.AddAlbum(authorID2, albumName, albumYear, cover)
+		albumID2, err3 := db.AddAlbum(authorID2, albumName, albumYear, cover)
 		fmt.Printf("albumID2 = '%v'\n", albumID2)
 		assert.Equal(t, 2, albumID2)
-		assert.Nil(t, err)
+		assert.Nil(t, err3)
 
 		expectLen := 2
 

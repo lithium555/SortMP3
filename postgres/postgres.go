@@ -146,26 +146,27 @@ func (db *Database) AddAuthor(author string) (int, error) {
 
 // AddAlbum represents the record insertion into table `ALBUM`
 func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cover string) (int, error) {
-	// Let`s try to find out name of this album in table, maybe he is exist.
-
-	// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
-	// like in this func GetExistsAlbum()
-	existAlbumID, err := db.GetExistsAlbum(authorID, albumName, albumYear)
-	if err == nil {
-		return existAlbumID, nil
-	}
-	// if this album doesnt exist in table, lets Insert it into table:
+	// If this album doesnt exist in table, lets Insert it into table:
 	var coverToInsert interface{}
 	if cover != "" {
 		coverToInsert = cover
 	}
 	var albumID int
-	err = db.PostgresConn.QueryRow(`
+	err := db.PostgresConn.QueryRow(`
 			INSERT INTO ALBUM(author_id, album_name, album_year, cover)
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, authorID, albumName, albumYear, coverToInsert).Scan(&albumID)
-	if err != nil {
+	if err == DuplicateValueErr {
+		// Let`s try to find out name of this album in table, maybe he is exist.
+
+		// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
+		// like in this func GetExistsAlbum()
+		existAlbumID, err := db.GetExistsAlbum(authorID, albumName, albumYear)
+		if err == nil {
+			return existAlbumID, nil
+		}
+	} else if err != nil {
 		log.Printf("Can`t insert album '%v' into table in func AddAlbum(). Error: '%v'\n", albumName, err)
 		return 0, err
 	}
