@@ -725,6 +725,7 @@ func Test_SelectALBUM(t *testing.T) {
 		require.Nil(t, gotErr)
 	})
 	t.Run("successful select album", func(t *testing.T) {
+		t.Skip()
 		db := ensureTables(t)
 
 		authorID, err := db.AddAuthor("Soufly")

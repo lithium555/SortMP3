@@ -83,19 +83,22 @@ func (db *Database) CreateTable(query string) error {
 
 // AddGenre represents the record insertion into table `GENRE`.
 func (db *Database) AddGenre(genreName string) (int, error) {
-	// Maybe this genre exists in our table `GENRE`, lets try to find it.
-	existGenreID, err := db.GetExistsGenre(genreName)
-	if err == nil {
-		return existGenreID, nil
-	}
-	// If we can`t find Genre, let`s add it into table `GENRE`
 	var genreID int
-	err = db.GetConnection().QueryRow(`
+	err := db.GetConnection().QueryRow(`
 		INSERT INTO GENRE(genre_name) 
 			VALUES ($1) 	
 			RETURNING id
 		`, genreName).Scan(&genreID)
-	if err != nil {
+	convertErr := convertError(err)
+	if convertErr == nil {
+		return genreID, nil
+	} else if convertErr == DuplicateValueErr {
+		// Maybe this genre exists in our table `GENRE`, lets try to find it.
+		existGenreID, err := db.GetExistsGenre(genreName)
+		if err == nil {
+			return existGenreID, nil
+		}
+	} else if err != nil {
 		log.Printf("Can`t insert genre `%v` into table. Error: '%v'\n", genreName, err)
 		return 0, err
 	}
@@ -125,18 +128,23 @@ func (db *Database) FindGenres() ([]models.Genre, error) {
 
 // AddAuthor represents the record insertion into table `AUTHOR`.
 func (db *Database) AddAuthor(author string) (int, error) {
-	// Maybe Author exist in our table, so let`s try to find his ID in a table
-	existsAuthorID, err := db.GetExistsAuthor(author)
-	if err == nil {
-		return existsAuthorID, nil
-	}
+
 	// If Author not exist in our table - lets Insert him to table
 	var authorID int
-	err = db.PostgresConn.QueryRow(`
+	err := db.PostgresConn.QueryRow(`
 					INSERT INTO author (author_name)
 					VALUES ($1) RETURNING id
 		`, author).Scan(&authorID)
-	if err != nil {
+	convertErr := convertError(err)
+	if convertErr == nil {
+		return authorID, nil
+	} else if convertErr == DuplicateValueErr {
+		// Maybe Author exist in our table, so let`s try to find his ID in a table
+		existsAuthorID, err := db.GetExistsAuthor(author)
+		if err == nil {
+			return existsAuthorID, nil
+		}
+	} else if convertErr != nil {
 		log.Printf("Can`t Insert new Author '%v' in func AddAuthor(); Error: '%v'\n", author, err)
 		return 0, err
 	}
@@ -157,7 +165,10 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, authorID, albumName, albumYear, coverToInsert).Scan(&albumID)
-	if err == DuplicateValueErr {
+	convertErr := convertError(err)
+	if convertErr == nil {
+		return albumID, nil
+	} else if convertErr == DuplicateValueErr {
 		// Let`s try to find out name of this album in table, maybe he is exist.
 
 		// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
@@ -166,9 +177,9 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 		if err == nil {
 			return existAlbumID, nil
 		}
-	} else if err != nil {
+	} else if convertErr != nil {
 		log.Printf("Can`t insert album '%v' into table in func AddAlbum(). Error: '%v'\n", albumName, err)
-		return 0, err
+		return 0, convertErr
 	}
 
 	return albumID, nil
