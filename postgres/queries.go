@@ -14,20 +14,22 @@ const (
 	// CreateTableALBUM represents query for creating table ALBUM.
 	CreateTableALBUM = `CREATE TABLE IF NOT EXISTS album (
 												id SERIAL PRIMARY KEY,
-												author_id INT  UNIQUE, 
-												album_name TEXT UNIQUE,
+												author_id INT, 
+												album_name TEXT,
 												album_year INT,
 												cover TEXT, 
+												UNIQUE(author_id, album_name),
 												FOREIGN KEY (author_id) REFERENCES author(id)
 	);`
 	// CreateTableSONG represents query for creating table SONG.  +
 	CreateTableSONG = `CREATE TABLE IF NOT EXISTS song(  
 												id SERIAL PRIMARY KEY,
-												name_of_song TEXT UNIQUE,
+												name_of_song TEXT,
 												album_id INT,
 												genre_id INT,
-												author_id INT  UNIQUE,
-												track_number INT, 
+												author_id INT,
+												track_number INT,
+												UNIQUE(name_of_song, author_id),
 												FOREIGN KEY (album_id) REFERENCES album(id),
 												FOREIGN KEY (genre_id) REFERENCES genre(id),
 												FOREIGN KEY (author_id) REFERENCES author(id)

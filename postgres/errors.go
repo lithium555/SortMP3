@@ -59,20 +59,7 @@ func convertError(err error) error {
 	return err
 }
 
-func parseErrorCode(err error) string { // nolint function for detection type of error
-	if err == nil {
-		return ""
-	}
-
-	switch err := errors.Cause(err).(type) {
-	case *pq.Error:
-		return string(err.Code)
-	}
-
-	return ""
-}
-
-// TODO: delete this old functions aftel all will be fine with new one
+// TODO: delete this old functions after all will be fine with new one
 //func convertError(err error) error {
 //	if err == nil {
 //		return nil

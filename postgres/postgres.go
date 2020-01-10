@@ -89,14 +89,16 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 			VALUES ($1) 	
 			RETURNING id
 		`, genreName).Scan(&genreID)
-	convertErr := convertError(err)
-	if convertErr == nil {
+	err = convertError(err)
+	if err == nil {
 		return genreID, nil
-	} else if convertErr == DuplicateValueErr {
+	} else if err == DuplicateValueErr {
 		// Maybe this genre exists in our table `GENRE`, lets try to find it.
 		existGenreID, err := db.GetExistsGenre(genreName)
 		if err == nil {
 			return existGenreID, nil
+		} else {
+			return 0, err
 		}
 	} else if err != nil {
 		log.Printf("Can`t insert genre `%v` into table. Error: '%v'\n", genreName, err)
@@ -143,6 +145,8 @@ func (db *Database) AddAuthor(author string) (int, error) {
 		existsAuthorID, err := db.GetExistsAuthor(author)
 		if err == nil {
 			return existsAuthorID, nil
+		} else {
+			return 0, err
 		}
 	} else if convertErr != nil {
 		log.Printf("Can`t Insert new Author '%v' in func AddAuthor(); Error: '%v'\n", author, err)
@@ -176,6 +180,8 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 		existAlbumID, err := db.GetExistsAlbum(authorID, albumName, albumYear)
 		if err == nil {
 			return existAlbumID, nil
+		} else {
+			return 0, err
 		}
 	} else if convertErr != nil {
 		log.Printf("Can`t insert album '%v' into table in func AddAlbum(). Error: '%v'\n", albumName, err)
@@ -395,7 +401,7 @@ func (db *Database) SelectALBUM() ([]*models.Album, error) {
 	}
 	defer rows.Close()
 
-	albums := make([]*models.Album, 0)
+	var albums []*models.Album
 	for rows.Next() {
 		album := new(models.Album)
 		var coverScan sql.NullString

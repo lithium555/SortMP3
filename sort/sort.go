@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/dhowden/tag"
-	"github.com/lithium555/SortMP3/draft"
 	"github.com/lithium555/SortMP3/postgres"
 )
 
@@ -51,34 +50,6 @@ func Variant1(root string) ([]string, error) {
 		}
 		return nil
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
-}
-
-func variant2() ([]string, error) {
-	var (
-		root  string
-		files []string
-		err   error
-	)
-
-	root = "./readData/"
-
-	// filepath.Walk
-	files, err = draft.FilePathWalkDir(root)
-	if err != nil {
-		return nil, err
-	}
-	// ioutil.ReadDir
-	files, err = draft.IOReadDir(root)
-	if err != nil {
-		return nil, err
-	}
-	//os.File.Readdir
-	files, err = draft.OSReadDir(root)
 	if err != nil {
 		return nil, err
 	}
