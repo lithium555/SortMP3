@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"reflect"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -387,10 +388,11 @@ func Test_AddAuthor(t *testing.T) {
 		id, err := db.AddAuthor(authors[0])
 		assert.NotNil(t, id)
 		assert.Nil(t, err)
+		expectedID := id
 
 		gotID, gotErr := db.AddAuthor(authors[1])
 		assert.Nil(t, gotErr)
-		assert.Equal(t, 1, gotID) // function should return id if element exist
+		assert.Equal(t, expectedID, gotID) // function should return id if element exist
 
 		gotVal, gotErr := db.SelectAUTHOR()
 		require.Nil(t, gotErr)
@@ -429,7 +431,7 @@ func Test_AddGenre(t *testing.T) {
 			require.NotNil(t, gotID)
 
 			if k == 1 {
-				require.Equal(t, 1, gotID) // if elemet exist, func should return exists ID
+				require.Equal(t, 1, gotID) // if element exist, func should return exists ID
 			}
 		}
 
@@ -448,7 +450,7 @@ func Test_AddGenre(t *testing.T) {
 
 		genres, err := db.FindGenres()
 		require.Nil(t, err)
-		require.Equal(t, 1, len(genres))
+		require.Equal(t, gotID, len(genres))
 		//require.Equal(t, 0, len(genres))
 	})
 
@@ -576,7 +578,309 @@ func TestDatabase_InsertSONG(t *testing.T) {
 		require.Equal(t, expectSong, gotVal[0])
 		require.Nil(t, gotErr)
 	})
-	t.Run("insert 3 songs", func(t *testing.T) {
+	t.Run("insert 2 different songs, where the same author, the same genre, the same album", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		_, err = db.AddAuthor("Animals as Leaders")
+		assert.Nil(t, err)
+		autorID, err := db.AddAuthor("Here Comes The Kraken")
+		assert.Nil(t, err)
+
+		_, err = db.AddGenre("Math-metal")
+		assert.Nil(t, err)
+		_, err = db.AddGenre("progressive")
+		assert.Nil(t, err)
+		genreID, genreErr := db.AddGenre("melodic death metal")
+		assert.Nil(t, genreErr)
+
+		albumID, albumErr := db.AddAlbum(autorID, "Here Comes The Kraken", 2009, "")
+		assert.Nil(t, albumErr)
+
+		insErr := db.InsertSONG("It's Comming", albumID, genreID, autorID, 1)
+		assert.Nil(t, insErr)
+
+		gotErr := db.InsertSONG("Don't Fail Me Darko", albumID, genreID, autorID, 2)
+		require.Nil(t, gotErr)
+	})
+	t.Run("Trying to write Duplicate Value to the DB", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		_, err = db.AddAuthor("Animals as Leaders")
+		assert.Nil(t, err)
+		authorID, err := db.AddAuthor("Here Comes The Kraken")
+		assert.Nil(t, err)
+
+		_, err = db.AddGenre("Math-metal")
+		assert.Nil(t, err)
+		_, err = db.AddGenre("progressive")
+		assert.Nil(t, err)
+		genreID, genreErr := db.AddGenre("melodic death metal")
+		assert.Nil(t, genreErr)
+
+		albumID, albumErr := db.AddAlbum(authorID, "Here Comes The Kraken", 2009, "")
+		assert.Nil(t, albumErr)
+
+		insErr := db.InsertSONG("Name of fire", albumID, genreID, authorID, 1)
+		assert.Nil(t, insErr)
+
+		gotErr := db.InsertSONG("Name of fire", albumID, genreID, authorID, 3)
+		require.Equal(t, DuplicateValueErr, gotErr)
+	})
+	t.Run("authors with the same album", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID1, err := db.AddAuthor("Definition Sane")
+		assert.Nil(t, err)
+		authorID2, err := db.AddAuthor("Metallica")
+		assert.Nil(t, err)
+
+		albumID1, albumErr := db.AddAlbum(authorID1, "Saint Anger", 2003, "")
+		require.Nil(t, albumErr)
+
+		albumID2, albumErr := db.AddAlbum(authorID2, "Saint Anger", 2003, "")
+		require.Nil(t, albumErr)
+
+		if reflect.DeepEqual(albumID1, albumID2) {
+			t.Error("test 'authors with the same album' FAILED. albumID1 shouldn`t be equal albumID2")
+		}
+	})
+	t.Run("different authors, the same song, the same album, the same trackNum", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID1, err := db.AddAuthor("Definition Sane")
+		assert.Nil(t, err)
+		authorID2, err := db.AddAuthor("Metallica")
+		assert.Nil(t, err)
+
+		genreID1, err := db.AddGenre("Grind metal")
+		assert.Nil(t, err)
+		genreID2, err := db.AddGenre("Trash metal")
+		assert.Nil(t, err)
+
+		albumID1, albumErr := db.AddAlbum(authorID1, "Saint Anger", 2003, "")
+		require.Nil(t, albumErr)
+
+		nameOfSong := "Saint Anger"
+		insErr := db.InsertSONG(nameOfSong, albumID1, genreID1, authorID1, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG(nameOfSong, albumID1, genreID2, authorID2, 1)
+		require.Nil(t, insErr)
+	})
+
+	t.Run("different authors, different genre, the same song, the same album, the same trackNum, different genre", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID1, err := db.AddAuthor("Definition Sane")
+		assert.Nil(t, err)
+		authorID2, err := db.AddAuthor("Metallica")
+		assert.Nil(t, err)
+
+		genreID1, err := db.AddGenre("Grind metal")
+		assert.Nil(t, err)
+		genreID2, err := db.AddGenre("Trash metal")
+		assert.Nil(t, err)
+
+		albumID, albumErr := db.AddAlbum(authorID1, "Saint Anger", 2003, "")
+		require.Nil(t, albumErr)
+
+		nameOfSong := "No Build to last"
+		insErr := db.InsertSONG(nameOfSong, albumID, genreID1, authorID1, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG(nameOfSong, albumID, genreID2, authorID2, 1)
+		require.Nil(t, insErr)
+	})
+	t.Run("2 albums of one author", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID, err := db.AddAuthor("KONVENT")
+		assert.Nil(t, err)
+
+		albumID1, albumErr1 := db.AddAlbum(authorID, "Demo", 2017, "")
+		assert.Nil(t, albumErr1)
+		albumID2, albumErr2 := db.AddAlbum(authorID, "Puritan Masochism", 20, "")
+		assert.Nil(t, albumErr2)
+
+		if reflect.DeepEqual(albumID1, albumID2) {
+			t.Error("test '2 albums of one author' FAILED. albumID1 shouldn`t be equal albumID2")
+		}
+	})
+	// TODO : this test failed, so we should rewrite function
+	t.Run("the same name of song in different albums in one author", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID1, err := db.AddAuthor("KONVENT")
+		assert.Nil(t, err)
+
+		genreID1, err := db.AddGenre("Death/Doom Metal")
+		assert.Nil(t, err)
+
+		albumID1, albumErr1 := db.AddAlbum(authorID1, "Demo", 2017, "")
+		assert.Nil(t, albumErr1)
+		albumID2, albumErr2 := db.AddAlbum(authorID1, "Puritan Masochism", 2020, "")
+		assert.Nil(t, albumErr2)
+
+		insErr := db.InsertSONG("Domination", albumID1, genreID1, authorID1, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Domination", albumID2, genreID1, authorID1, 10)
+		require.Nil(t, insErr)
+	})
+	// TODO the same song '"Squares"' in defferent albums of one author
+	//  TODO: WRITE tomorrow: the same song '"Squares"' in different albums of different authors
+	t.Run("2 authors with few albums, insert few different songs", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID1, err := db.AddAuthor("KONVENT")
+		assert.Nil(t, err)
+		genreID1, err := db.AddGenre("Death/Doom Metal")
+		assert.Nil(t, err)
+
+		albumID1, albumErr1 := db.AddAlbum(authorID1, "Demo", 2017, "")
+		assert.Nil(t, albumErr1)
+		albumID2, albumErr2 := db.AddAlbum(authorID1, "Puritan Masochism", 2020, "")
+		assert.Nil(t, albumErr2)
+
+		insErr := db.InsertSONG("Chernobyl Child", albumID1, genreID1, authorID1, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Squares", albumID1, genreID1, authorID1, 2)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("No End", albumID1, genreID1, authorID1, 4)
+		require.Nil(t, insErr)
+
+		insErr = db.InsertSONG("Squares", albumID2, genreID1, authorID1, 2)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Bridge", albumID2, genreID1, authorID1, 5)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Idle Hands", albumID2, genreID1, authorID1, 7)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Ropes, Pt. 1", albumID2, genreID1, authorID1, 8)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Ropes, Pt. 2", albumID2, genreID1, authorID1, 9)
+		require.Nil(t, insErr)
+
+		// Second author
+		authorID2, err := db.AddAuthor("Entombed")
+		assert.Nil(t, err)
+		genreID2, err := db.AddGenre("Death-n-Roll")
+		assert.Nil(t, err)
+
+		albumID3, albumErr3 := db.AddAlbum(authorID2, "Left Hand Path", 1990, "")
+		assert.Nil(t, albumErr3)
+		albumID4, albumErr4 := db.AddAlbum(authorID2, "Clandestine", 1991, "")
+		assert.Nil(t, albumErr4)
+		albumID5, albumErr5 := db.AddAlbum(authorID2, "Wolverine Blues", 1993, "")
+		assert.Nil(t, albumErr5)
+		albumID6, albumErr6 := db.AddAlbum(authorID2, "DCLXVI: To Ride Shoot Straight and Speak the Truth", 1997, "")
+		assert.Nil(t, albumErr6)
+		albumID7, albumErr7 := db.AddAlbum(authorID2, "Same Difference", 1998, "")
+		assert.Nil(t, albumErr7)
+
+		insErr = db.InsertSONG("Left Hand Path", albumID3, genreID2, authorID2, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Revel in Flesh", albumID3, genreID2, authorID2, 3)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("When Life Has Ceased", albumID3, genreID2, authorID2, 4)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Morbid Devourment", albumID3, genreID2, authorID2, 8)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Abnormally Deceased", albumID3, genreID2, authorID2, 9)
+		require.Nil(t, insErr)
+
+		insErr = db.InsertSONG("Stranger Aeons", albumID4, genreID2, authorID2, 5)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Chaos Breed", albumID4, genreID2, authorID2, 6)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Crawl", albumID4, genreID2, authorID2, 7)
+		require.Nil(t, insErr)
+
+		insErr = db.InsertSONG("Eyemaster", albumID5, genreID2, authorID2, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Rotten Soil", albumID5, genreID2, authorID2, 2)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Wolverine Blues", albumID5, genreID2, authorID2, 3)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Demon", albumID5, genreID2, authorID2, 4)
+		require.Nil(t, insErr)
+
+		insErr = db.InsertSONG("To Ride, Shoot Straight and Speak the Truth", albumID6, genreID2, authorID2, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Like This with the Devil", albumID6, genreID2, authorID2, 2)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Lights Out", albumID6, genreID2, authorID2, 3)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("DCLXVI", albumID6, genreID2, authorID2, 7)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Put Me Out", albumID6, genreID2, authorID2, 10)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Just as Sad", albumID6, genreID2, authorID2, 11)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Boats", albumID6, genreID2, authorID2, 12)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Uffe's Horrorshow", albumID6, genreID2, authorID2, 13)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Wreckage", albumID6, genreID2, authorID2, 14)
+		require.Nil(t, insErr)
+
+		insErr = db.InsertSONG("Addiction King", albumID7, genreID2, authorID2, 1)
+		require.Nil(t, insErr)
+	})
+	// TODO: write THAT test tomorrow! Also write test where tracknum the same for one album
+	t.Run("the same song in different authors", func(t *testing.T) {
 
 	})
 }
@@ -725,7 +1029,6 @@ func Test_SelectALBUM(t *testing.T) {
 		require.Nil(t, gotErr)
 	})
 	t.Run("successful select album", func(t *testing.T) {
-		t.Skip()
 		db := ensureTables(t)
 
 		authorID, err := db.AddAuthor("Soufly")

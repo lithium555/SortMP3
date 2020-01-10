@@ -28,6 +28,11 @@ func run() error {
 	}
 	defer postgres.Close()
 
+	dropErr := DropTables(postgres)
+	if dropErr != nil {
+		return dropErr
+	}
+
 	fmt.Printf("postgres = '%v'\n", postgres)
 
 	if err := sort.CreateTables(postgres); err != nil {
@@ -81,6 +86,7 @@ func run() error {
 			return err
 		}
 		fmt.Printf("========================albumID = '%v'\n", albumID)
+		fmt.Printf("==================numberOfTrack = '%v'\n", numberOfTrack)
 
 		err = postgres.InsertSONG(md.Title(), albumID, genreID, authorID, numberOfTrack)
 		if err != nil {
@@ -94,5 +100,15 @@ func run() error {
 		return err
 	}
 
+	return nil
+}
+
+func DropTables(getPostgres postgres.Database) error {
+	allTables := []string{postgres.TableSong, postgres.TableAlbum, postgres.TableAuthor, postgres.TableGenre}
+	for _, table := range allTables {
+		if err := getPostgres.Drop(table); err != nil {
+			return err
+		}
+	}
 	return nil
 }

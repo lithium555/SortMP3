@@ -204,7 +204,10 @@ func (db *Database) InsertSONG(songName string, albumID int, genreID int, author
 		track_number)
 	VALUES ($1, $2, $3, $4, $5)
 	`, songName, albumID, genreID, authorID, trackNum)
-	if err != nil {
+	err = convertError(err)
+	if err == DuplicateValueErr {
+		return DuplicateValueErr
+	} else if err != nil {
 		return err
 	}
 	return nil
