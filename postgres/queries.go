@@ -29,7 +29,7 @@ const (
 												genre_id INT,
 												author_id INT,
 												track_number INT,
-												UNIQUE(name_of_song, author_id),
+												UNIQUE(name_of_song, author_id, album_id),
 												FOREIGN KEY (album_id) REFERENCES album(id),
 												FOREIGN KEY (genre_id) REFERENCES genre(id),
 												FOREIGN KEY (author_id) REFERENCES author(id)

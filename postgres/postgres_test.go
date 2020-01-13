@@ -746,7 +746,6 @@ func TestDatabase_InsertSONG(t *testing.T) {
 			t.Error("test '2 albums of one author' FAILED. albumID1 shouldn`t be equal albumID2")
 		}
 	})
-	// TODO : this test failed, so we should rewrite function
 	t.Run("the same name of song in different albums in one author", func(t *testing.T) {
 		db, err := GetPostgresConnection()
 		assert.Nil(t, err)
@@ -773,8 +772,7 @@ func TestDatabase_InsertSONG(t *testing.T) {
 		insErr = db.InsertSONG("Domination", albumID2, genreID1, authorID1, 10)
 		require.Nil(t, insErr)
 	})
-	// TODO the same song '"Squares"' in defferent albums of one author
-	//  TODO: WRITE tomorrow: the same song '"Squares"' in different albums of different authors
+	// Test with the same song '"Squares"' in different albums of one author.
 	t.Run("2 authors with few albums, insert few different songs", func(t *testing.T) {
 		db, err := GetPostgresConnection()
 		assert.Nil(t, err)
@@ -879,9 +877,71 @@ func TestDatabase_InsertSONG(t *testing.T) {
 		insErr = db.InsertSONG("Addiction King", albumID7, genreID2, authorID2, 1)
 		require.Nil(t, insErr)
 	})
-	// TODO: write THAT test tomorrow! Also write test where tracknum the same for one album
-	t.Run("the same song in different authors", func(t *testing.T) {
+	t.Run("the same song 'Squares' in different albums of different authors", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
 
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID1, err := db.AddAuthor("KONVENT")
+		assert.Nil(t, err)
+		genreID1, err := db.AddGenre("Death/Doom Metal")
+		assert.Nil(t, err)
+
+		albumID1, albumErr1 := db.AddAlbum(authorID1, "Demo", 2017, "")
+		assert.Nil(t, albumErr1)
+
+		insErr := db.InsertSONG("Chernobyl Child", albumID1, genreID1, authorID1, 1)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Squares", albumID1, genreID1, authorID1, 2)
+		require.Nil(t, insErr)
+
+		// Second author
+		authorID2, err := db.AddAuthor("Entombed")
+		assert.Nil(t, err)
+		genreID2, err := db.AddGenre("Death-n-Roll")
+		assert.Nil(t, err)
+
+		albumID2, albumErr3 := db.AddAlbum(authorID2, "Left Hand Path", 1990, "")
+		assert.Nil(t, albumErr3)
+		_, albumErr4 := db.AddAlbum(authorID2, "Clandestine", 1991, "")
+		assert.Nil(t, albumErr4)
+
+		insErr = db.InsertSONG("Squares", albumID2, genreID1, authorID1, 2)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Bridge", albumID2, genreID2, authorID1, 5)
+		require.Nil(t, insErr)
+	})
+	// TODO: Write test where tracknum the same for one album
+	// TODO: this test go without errors. Question: will be trackNum UNIQUE or not?
+	t.Run("the same song in different authors", func(t *testing.T) {
+		db, err := GetPostgresConnection()
+		assert.Nil(t, err)
+
+		dropErr := DropTablesAfterTest(db)
+		assert.Nil(t, dropErr)
+
+		err = CreateTablesForTest(db)
+		assert.Nil(t, err)
+
+		authorID, err := db.AddAuthor("Entombed")
+		assert.Nil(t, err)
+		genreID, err := db.AddGenre("Death-n-Roll")
+		assert.Nil(t, err)
+
+		albumID, albumErr3 := db.AddAlbum(authorID, "Left Hand Path", 1990, "")
+		assert.Nil(t, albumErr3)
+
+		insErr := db.InsertSONG("Eyemaster", albumID, genreID, authorID, 5)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Rotten Soil", albumID, genreID, authorID, 5)
+		require.Nil(t, insErr)
+		insErr = db.InsertSONG("Wolverine Blues", albumID, genreID, authorID, 3)
+		require.Nil(t, insErr)
 	})
 }
 
