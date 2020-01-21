@@ -95,10 +95,8 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 	} else if err == DuplicateValueErr {
 		// Maybe this genre exists in our table `GENRE`, lets try to find it.
 		existGenreID, err := db.GetExistsGenre(genreName)
-		if err == nil {
+		if err == nil && existGenreID != 0 {
 			return existGenreID, nil
-		} else {
-			return 0, err
 		}
 	} else if err != nil {
 		log.Printf("Can`t insert genre `%v` into table. Error: '%v'\n", genreName, err)
@@ -145,8 +143,6 @@ func (db *Database) AddAuthor(author string) (int, error) {
 		existsAuthorID, err := db.GetExistsAuthor(author)
 		if err == nil {
 			return existsAuthorID, nil
-		} else {
-			return 0, err
 		}
 	} else if convertErr != nil {
 		log.Printf("Can`t Insert new Author '%v' in func AddAuthor(); Error: '%v'\n", author, err)
@@ -178,10 +174,8 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 		// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
 		// like in this func GetExistsAlbum()
 		existAlbumID, err := db.GetExistsAlbum(authorID, albumName, albumYear)
-		if err == nil {
+		if err == nil && existAlbumID != 0 {
 			return existAlbumID, nil
-		} else {
-			return 0, err
 		}
 	} else if convertErr != nil {
 		log.Printf("Can`t insert album '%v' into table in func AddAlbum(). Error: '%v'\n", albumName, err)
@@ -205,9 +199,7 @@ func (db *Database) InsertSONG(songName string, albumID int, genreID int, author
 	VALUES ($1, $2, $3, $4, $5)
 	`, songName, albumID, genreID, authorID, trackNum)
 	err = convertError(err)
-	if err == DuplicateValueErr {
-		return DuplicateValueErr
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 	return nil
@@ -431,4 +423,16 @@ func (db *Database) SelectALBUM() ([]*models.Album, error) {
 		fmt.Println()
 	}
 	return albums, nil
+}
+
+// DropAllTables will drop all tables: GENRE, AUTHOR, ALBUM, SONG
+func (db *Database) DropAllTables(getPostgres Database) error {
+	allTables := []string{TableSong, TableAlbum, TableAuthor, TableGenre}
+	for _, table := range allTables {
+		if err := getPostgres.Drop(table); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

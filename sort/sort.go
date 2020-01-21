@@ -26,18 +26,6 @@ func CreateTables(getPostgres postgres.Database) error {
 	return nil
 }
 
-// DropAllTables will drop all tables: GENRE, AUTHOR, ALBUM, SONG
-func DropAllTables(getPostgres postgres.Database) error {
-	allTables := []string{postgres.TableSong, postgres.TableAlbum, postgres.TableAuthor, postgres.TableGenre}
-	for _, table := range allTables {
-		if err := getPostgres.Drop(table); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Variant1 represents a walker of all mp3 files.
 func Variant1(root string) ([]string, error) {
 	//https://flaviocopes.com/go-list-files/

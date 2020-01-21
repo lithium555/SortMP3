@@ -37,3 +37,8 @@ const (
 )
 
 // http://www.postgresqltutorial.com/postgresql-identity-column/
+//
+// LINE 32:
+// The order in the index may be important. In you case you can sort by the name of the song only.
+// If you change to author_id, album_id, name, then you will be able to sort by the author, then album (of this author),
+// then track name (in this album).

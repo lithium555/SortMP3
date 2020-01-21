@@ -28,9 +28,9 @@ func run() error {
 	}
 	defer postgres.Close()
 
-	dropErr := DropTables(postgres)
-	if dropErr != nil {
-		return dropErr
+	err = DropTables(postgres)
+	if err != nil {
+		return err
 	}
 
 	fmt.Printf("postgres = '%v'\n", postgres)
@@ -96,7 +96,7 @@ func run() error {
 		fmt.Println()
 	}
 
-	if err := sort.DropAllTables(postgres); err != nil {
+	if err := postgres.DropAllTables(postgres); err != nil {
 		return err
 	}
 
