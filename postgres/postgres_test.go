@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"reflect"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -661,9 +660,8 @@ func TestDatabase_InsertSONG(t *testing.T) {
 		albumID2, albumErr := db.AddAlbum(authorID2, "Saint Anger", 2003, "")
 		require.Nil(t, albumErr)
 
-		if reflect.DeepEqual(albumID1, albumID2) {
-			t.Error("test 'authors with the same album' FAILED. albumID1 shouldn`t be equal albumID2")
-		}
+		// authorID1 != authorID2, so we should have 2 records with different albumID:
+		require.NotEqual(t, albumID1, albumID2)
 	})
 	t.Run("different authors, the same song, the same album, the same trackNum", func(t *testing.T) {
 		db, err := GetPostgresConnection()
@@ -742,9 +740,8 @@ func TestDatabase_InsertSONG(t *testing.T) {
 		albumID2, albumErr2 := db.AddAlbum(authorID, "Puritan Masochism", 20, "")
 		assert.Nil(t, albumErr2)
 
-		if reflect.DeepEqual(albumID1, albumID2) {
-			t.Error("test '2 albums of one author' FAILED. albumID1 shouldn`t be equal albumID2")
-		}
+		// 2 albums of one author, so we should get 2 different albumID
+		require.NotEqual(t, albumID1, albumID2)
 	})
 	t.Run("the same name of song in different albums in one author", func(t *testing.T) {
 		db, err := GetPostgresConnection()

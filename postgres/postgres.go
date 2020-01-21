@@ -95,9 +95,10 @@ func (db *Database) AddGenre(genreName string) (int, error) {
 	} else if err == DuplicateValueErr {
 		// Maybe this genre exists in our table `GENRE`, lets try to find it.
 		existGenreID, err := db.GetExistsGenre(genreName)
-		if err == nil && existGenreID != 0 {
+		if err == nil {
 			return existGenreID, nil
 		}
+		return 0, err
 	} else if err != nil {
 		log.Printf("Can`t insert genre `%v` into table. Error: '%v'\n", genreName, err)
 		return 0, err
@@ -144,6 +145,7 @@ func (db *Database) AddAuthor(author string) (int, error) {
 		if err == nil {
 			return existsAuthorID, nil
 		}
+		return 0, err
 	} else if convertErr != nil {
 		log.Printf("Can`t Insert new Author '%v' in func AddAuthor(); Error: '%v'\n", author, err)
 		return 0, err
@@ -174,9 +176,10 @@ func (db *Database) AddAlbum(authorID int, albumName string, albumYear int, cove
 		// Sometimes name of albums are the same, but if we will seek them by 3 arguments,
 		// like in this func GetExistsAlbum()
 		existAlbumID, err := db.GetExistsAlbum(authorID, albumName, albumYear)
-		if err == nil && existAlbumID != 0 {
+		if err == nil {
 			return existAlbumID, nil
 		}
+		return 0, err
 	} else if convertErr != nil {
 		log.Printf("Can`t insert album '%v' into table in func AddAlbum(). Error: '%v'\n", albumName, err)
 		return 0, convertErr
@@ -434,5 +437,15 @@ func (db *Database) DropAllTables(getPostgres Database) error {
 		}
 	}
 
+	return nil
+}
+
+func (db *Database) DropTables(getPostgres Database) error {
+	allTables := []string{TableSong, TableAlbum, TableAuthor, TableGenre}
+	for _, table := range allTables {
+		if err := getPostgres.Drop(table); err != nil {
+			return err
+		}
+	}
 	return nil
 }

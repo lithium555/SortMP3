@@ -28,7 +28,7 @@ func run() error {
 	}
 	defer postgres.Close()
 
-	err = DropTables(postgres)
+	err = postgres.DropTables(postgres)
 	if err != nil {
 		return err
 	}
@@ -100,15 +100,5 @@ func run() error {
 		return err
 	}
 
-	return nil
-}
-
-func DropTables(getPostgres postgres.Database) error {
-	allTables := []string{postgres.TableSong, postgres.TableAlbum, postgres.TableAuthor, postgres.TableGenre}
-	for _, table := range allTables {
-		if err := getPostgres.Drop(table); err != nil {
-			return err
-		}
-	}
 	return nil
 }
