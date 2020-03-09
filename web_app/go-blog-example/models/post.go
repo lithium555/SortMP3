@@ -1,11 +1,12 @@
 package models
 
 type Post struct {
-	ID      string
-	Title   string
-	Content string
+	ID              string
+	Title           string
+	ContentHtml     string // надо чтобы отображать
+	ContentMarkdown string // надо чтобы редактировать
 }
 
-func NewPost(id, title, content string) *Post {
-	return &Post{id, title, content}
+func NewPost(id, title, contentHtml, ContentMarkdown string) *Post {
+	return &Post{id, title, contentHtml, ContentMarkdown}
 }
