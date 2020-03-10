@@ -35,4 +35,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.7 // indirect
 	gotest.tools v2.2.0+incompatible // indirect
+	labix.org/v2/mgo v0.0.0-20140701140051-000000000287
 )

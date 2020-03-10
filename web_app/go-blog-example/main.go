@@ -6,33 +6,46 @@ import (
 	"net/http"
 
 	"github.com/codegangsta/martini"
+	"github.com/lithium555/SortMP3/web_app/go-blog-example/db/documents"
 	"github.com/lithium555/SortMP3/web_app/go-blog-example/models"
 	"github.com/martini-contrib/render" // middleware
-	"github.com/russross/blackfriday"
+	"labix.org/v2/mgo"
 )
 
 var (
-	posts   map[string]*models.Post
-	counter int
+	postsCollection *mgo.Collection // глобальная коллекция к которой будем обращатьсяиз наших хендлеров
 )
 
 func indexHandler(rnd render.Render) {
-	fmt.Printf("counter: '%v'\n", counter)
+	postDocuments := make([]documents.PostDocument, 0)
+	// получить список всех постов из базы:
+	postsCollection.Find(nil).All(&postDocuments)
+
+	posts := make([]models.Post, 0)
+	for _, doc := range postDocuments {
+		post := models.Post{ID: doc.Id, Title: doc.Title, ContentHtml: doc.ContentHtml, ContentMarkdown: doc.ContentMarkdown}
+
+		posts = append(posts, post)
+	}
 
 	rnd.HTML(200, "index", posts)
 }
 
 func writeHandler(rnd render.Render) {
-	rnd.HTML(200, "write", nil) // in write we dont need any object, that is why we send nil
+	post := models.Post{}
+	rnd.HTML(200, "write", post) // in write we dont need any object, that is why we send nil
 }
 
 func editHandler(rnd render.Render, r *http.Request, params martini.Params) {
 	id := params["id"] // считываем айди, ищем пост(сообщение) в нашей мапе with key "id"
-	post, found := posts[id]
-	if !found {
+
+	postDocument := documents.PostDocument{}
+	err := postsCollection.FindId(id).One(&postDocument)
+	if err != nil {
 		rnd.Redirect("/")
 		return
 	}
+	post := models.Post{ID: postDocument.Id, Title: postDocument.Title, ContentHtml: postDocument.ContentHtml, ContentMarkdown: postDocument.ContentMarkdown}
 
 	rnd.HTML(200, "index", post)
 }
@@ -41,18 +54,15 @@ func savePostHandler(rnd render.Render, r *http.Request) {
 	id := r.FormValue("id")
 	title := r.FormValue("title")
 	contentMarkdown := r.FormValue("content")
-	contentHtml := string(blackfriday.Run([]byte(contentMarkdown)))
+	contentHtml := ConvertMarkdownToHtml(contentMarkdown)
 
-	var post *models.Post
+	postDocument := documents.PostDocument{Id: id, Title: title, ContentHtml: contentHtml, ContentMarkdown: contentMarkdown}
 	if id != "" {
-		post = posts[id]
-		post.Title = title
-		post.ContentHtml = contentHtml
-		post.ContentMarkdown = contentMarkdown
+		postsCollection.UpdateId(id, postDocument)
 	} else {
 		id = GenerateID()
-		post := models.NewPost(id, title, contentHtml, contentMarkdown)
-		posts[post.ID] = post
+		postDocument.Id = id
+		postsCollection.Insert(postDocument)
 	}
 
 	rnd.Redirect("/")
@@ -65,7 +75,7 @@ func deleteHandler(rnd render.Render, r *http.Request, params martini.Params) {
 		return
 	}
 
-	delete(posts, id)
+	postsCollection.RemoveId(id)
 
 	rnd.Redirect("/")
 }
@@ -92,9 +102,9 @@ func deleteHandler(rnd render.Render, r *http.Request, params martini.Params) {
 
 func getHtmlHandler(rnd render.Render, r http.Request) {
 	md := r.FormValue("md")
-	htmlBytes := blackfriday.Run([]byte(md))
+	html := ConvertMarkdownToHtml(md)
 
-	rnd.JSON(200, map[string]interface{}{"html": string(htmlBytes)})
+	rnd.JSON(200, map[string]interface{}{"html": html})
 }
 
 func unescape(x string) interface{} { // если не будем юзать то HTML будет показываться просто тегами
@@ -104,8 +114,12 @@ func unescape(x string) interface{} { // если не будем юзать т�
 func main() {
 	fmt.Println("Listening on port :3000")
 
-	posts = make(map[string]*models.Post)
-	counter = 0
+	session, err := mgo.Dial("lochalhost") // by standart port 27017
+	if err != nil {
+		panic(err)
+	}
+
+	postsCollection = session.DB("blog").C("posts")
 
 	m := martini.Classic() // include logging, validation of statistics files
 
