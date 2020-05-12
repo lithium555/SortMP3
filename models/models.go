@@ -18,7 +18,7 @@ type Album struct {
 	AuthorID  int
 	AlbumName string
 	AlbumYear int
-	Cover     string
+	Cover     *string
 }
 
 // Song represents song fields in table `SONG`

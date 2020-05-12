@@ -1,7 +1,7 @@
 Предварительный план по пету:
 
 1) Первичная доработка базы:
-1.1) Foreing keys (FK), связать ИД между таблицами.
+1.1) Foreign keys (FK), связать ИД между таблицами.
     http://www.postgresqltutorial.com/postgresql-foreign-key/
     https://postgrespro.ru/docs/postgresql/9.5/ddl-constraints
 
@@ -12,7 +12,7 @@
 
 2) Поиск дубликатов по хешу
 2.1) Хеширование. Разобраться как считать хеш всего файла. Какие хеши сейчас используют и почему.
-2.2) Поиск дулей по хешу. Попробовать поменять имя песни в файле и посмотреть найдет ли он дубль.
+2.2) Поиск дублей по хешу. Попробовать поменять имя песни в файле и посмотреть найдет ли он дубль.
 
 3) Поиск по акустическим хешам
 3.1) Акустический хеш. Зачем нужен? Почему работает лучше чем хеш по файлу? Добавить акустические хеши в базу запуская chromaprint через консоль из Го программы.
@@ -120,3 +120,13 @@ https://stackoverflow.com/questions/24712463/go-there-is-no-parameter-1
 указал. Если это SERIAL, то он генерит новый ключ. Если есть DEFAULT в
 объявлении таблицы - использует его. И если нет ни того ни другого,
 то поле будет NULL.
+
+
+checkRowsCount:
+https://github.com/lib/pq/issues/472
+https://github.com/lib/pq/issues/695
+https://github.com/lib/pq/issues/254
+https://gist.github.com/trkrameshkumar/f4f1c00ef5d578561c96
+https://flaviocopes.com/golang-sql-database/
+https://www.alexedwards.net/blog/practical-persistence-sql
+
