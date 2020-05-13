@@ -1,6 +1,6 @@
-# SortMP3
+#   SortMP3
 
-# Up postgres in container
+#   Up postgres in container
 ```
 docker run --name googleAPI_new -e POSTGRES_PASSWORD=rem -p 5432:5432 -d postgres
 
@@ -10,5 +10,27 @@ docker run --name sort_music -e POSTGRES_PASSWORD=master -e POSTGRES_DB=musicDB 
 
 ```
 
-# Remove postgres-container
+#   Remove postgres-container
 ```docker rm -f sort_music```
+#   Draft
+PostgreSQL:
+  restart: always
+  image: sameersbn/postgresql:10-2
+  ports:
+    - "5432:5432"
+  environment:
+    - DEBUG=false
+
+    - DB_USER=sorter
+    - DB_PASS=master
+    - DB_NAME=musicDB
+    - DB_TEMPLATE=
+
+    - DB_EXTENSION=
+
+    - REPLICATION_MODE=
+    - REPLICATION_USER=
+    - REPLICATION_PASS=
+    - REPLICATION_SSLMODE=
+  volumes:
+    - /srv/docker/postgresql:/var/lib/postgresql
