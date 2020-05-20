@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+
+  user-service:
+    image: user-service:1.0.50
+    container_name: user-service
+    build:
+      context: ./
+      dockerfile: docker/user-service/Dockerfile
+    depends_on:
+      - postgresdb
+      - auth-service
+    ports:
+      - "8080:8080"
+      - "8000:8000"
+    restart: unless-stopped
+    environment:
+      DATABASE_HOST: postgresdb
+
+    networks:
+      - default
+
+  auth-service:
+    image: auth-service:1.0.26
+    container_name: auth-service
+    build:
+      context: ./
+      dockerfile: docker/auth-service/Dockerfile
+    depends_on:
+      - postgresdb
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    environment:
+      DATABASE_HOST: postgresdb
+
+    networks:
+      - default
+
+  postgresdb:
+    container_name: postgresdb
+    image: "postgres"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5432"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - ./docker/postgres-data-source/initdb:/docker-entrypoint-initdb.d
+    #      - ./pgdata_new:/var/lib/postgresdb/data/pgdata //commented to add on the prod
+    environment:
+      PGDATA: /var/lib/postgresdb/data/pgdata
+    ports:
+      - "5432:5432"
+    networks:
+      - default

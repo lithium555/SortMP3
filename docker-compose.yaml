@@ -1,0 +1,42 @@
+version: '3.5'
+
+services:
+
+  # Application container
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgresdb
+
+    networks:
+      - default
+
+# Create a service named postgresqldb.
+  postgresdb:
+    container_name: postgresdb
+    #   Use the Docker Image postgres. This will pull the newest release.
+    image: "postgres"
+    restart: always
+    environment:
+      - POSTGRES_USER=sorter
+      - POSTGRES_PASSWORD=master
+      - POSTGRES_DB=musicDB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://postgresdb:5432"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+    networks:
+      - default
+
+volumes:
+  postgres-data:
