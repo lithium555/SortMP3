@@ -71,3 +71,28 @@ format:
 fix-imports:
 	${call colored, fixing imports...}
 	./scripts/fix-imports-order.sh
+
+## DB migration commands:
+## Create migration files with name which should be specified with flag 'n=some_name'.
+create-migrations:
+	migrate create -ext sql -dir migrations -seq $(n)
+	${call colored,migrations is created}
+
+## "postgres://user:password@host:port/name_db?sslmode=disable"
+database=postgres://sorter:master@localhost:5433/finndon?sslmode=disable
+
+## Roll migrations.
+migrate-up:
+	migrate -path ./migrations -database $(database) up
+	${call colored,migrations is upped}
+
+## Rollback all migrations.
+## If you specify flag 's=i' this will rollback 'i' migrations.
+migrate-down:
+	migrate -path ./migrations -database $(database) down $(s)
+	${call colored,migrations is downed}
+
+## Drop migrations.
+migrate-drop:
+	migrate -path ./migrations -database $(database) drop
+	${call colored,migrations is droped}
